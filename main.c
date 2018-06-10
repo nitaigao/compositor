@@ -72,6 +72,7 @@ struct wm_keyboard {
   struct wm_server *server;
   struct wlr_input_device *device;
   struct wl_listener key;
+  struct wl_listener modifiers;
   struct wl_listener destroy;
 };
 
@@ -112,7 +113,6 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
 
   struct wl_resource *_surface;
   wl_resource_for_each(_surface, &server->compositor->surface_resources) {
-    // printf("Draw resource %d\n", now.tv_sec);
     struct wlr_surface *surface = wlr_surface_from_resource(_surface);
 
     if (!wlr_surface_has_buffer(surface)) {
@@ -196,6 +196,15 @@ void exec_command(const char* shell_cmd) {
   }
 }
 
+void keyboard_modifiers_notify(struct wl_listener *listener, void *data) {
+  struct wm_keyboard *keyboard;
+  keyboard = wl_container_of(listener, keyboard, modifiers);
+
+  struct wlr_event_keyboard_key *event = data;
+
+  wlr_seat_keyboard_notify_modifiers(keyboard->server->seat, &keyboard->device->keyboard->modifiers);
+}
+
 void keyboard_key_notify(struct wl_listener *listener, void *data) {
   struct wm_keyboard *keyboard;
   keyboard = wl_container_of(listener, keyboard, key);
@@ -275,6 +284,9 @@ void new_input_notify(struct wl_listener *listener, void *data) {
     wl_signal_add(&device->keyboard->events.key, &keyboard->key);
     keyboard->key.notify = keyboard_key_notify;
 
+    wl_signal_add(&device->keyboard->events.modifiers, &keyboard->modifiers);
+    keyboard->modifiers.notify = keyboard_modifiers_notify;
+
     wlr_seat_set_keyboard(keyboard->server->seat, device);
 
     fprintf(stdout, "Keyboard Connected\n");
@@ -338,11 +350,9 @@ void handle_map(struct wl_listener *listener, void *data) {
     wm_surface->xdg_surface_v6->surface,
     NULL, 0, NULL
   );
-
 }
 
 void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
-  printf("handle_xdg_shell_v6_surface\n");
   struct wlr_xdg_surface_v6 *xdg_surface = data;
 
   struct wm_server *server;
@@ -368,7 +378,6 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
 
   wm_surface->map.notify = handle_map;
 	wl_signal_add(&xdg_surface->events.map, &wm_surface->map);
-
 }
 
 int main() {
