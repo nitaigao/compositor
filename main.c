@@ -10,6 +10,7 @@
 #include <wlr/xwayland.h>
 #include <wlr/backend/session.h>
 #include <wlr/render/wlr_renderer.h>
+#include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_idle.h>
 #include <wlr/types/wlr_compositor.h>
@@ -18,6 +19,7 @@
 #include <wlr/types/wlr_gamma_control.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_xdg_shell_v6.h>
+#include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_data_device.h>
@@ -26,42 +28,56 @@
 #include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
 
-struct mcw_server {
+
+struct wm_server {
   struct wl_display *wl_display;
   struct wl_event_loop *wl_event_loop;
   struct wlr_backend *backend;
   struct wlr_compositor *compositor;
+  struct wl_listener new_input;
   struct wl_listener new_output;
   struct wl_list outputs;
-  struct wl_listener new_input;
-  struct wlr_cursor *cursor;
+
   struct wlr_xwayland *xwayland;
   struct wl_listener xwayland_surface;
-  struct wlr_xcursor_manager *xcursor_manager;
   struct wlr_output_layout *layout;
-  struct wl_listener cursor_motion_absolute;
-  struct wl_listener cursor_motion;
+
+  struct wlr_xdg_shell_v6 *xdg_shell_v6;
+  struct wl_listener xdg_shell_v6_surface;
+  struct wlr_xcursor_manager *xcursor_manager;
 };
 
-struct mcw_output {
+struct wm_output {
   struct wlr_output *wlr_output;
-  struct mcw_server *server;
+  struct wm_server *server;
   struct timespec last_frame;
   struct wl_listener destroy;
   struct wl_listener frame;
   struct wl_list link;
 };
 
-struct sample_keyboard {
-  struct mcw_server *server;
+struct wm_surface {
+  struct wl_listener request_move;
+  struct wl_listener surface_commit;
+};
+
+struct wm_keyboard {
+  struct wm_server *server;
 	struct wlr_input_device *device;
 	struct wl_listener key;
 	struct wl_listener destroy;
 };
 
+struct wm_pointer {
+  struct wlr_cursor *cursor;
+  struct wl_listener cursor_motion_absolute;
+  struct wl_listener cursor_motion;
+};
+
+
 static void output_destroy_notify(struct wl_listener *listener, void *data) {
   printf("output_destroy_notify\n");
-  struct mcw_output *output = wl_container_of(listener, output, destroy);
+  struct wm_output *output = wl_container_of(listener, output, destroy);
 
   wl_list_remove(&output->link);
   wl_list_remove(&output->destroy.link);
@@ -71,9 +87,9 @@ static void output_destroy_notify(struct wl_listener *listener, void *data) {
 }
 
 static void output_frame_notify(struct wl_listener *listener, void *data) {
-  struct mcw_output *output;
+  struct wm_output *output;
   output = wl_container_of(listener, output, frame);
-  struct mcw_server *server = output->server;
+  struct wm_server *server = output->server;
   struct wlr_output *wlr_output = output->wlr_output;
   struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
 
@@ -97,8 +113,8 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
     struct wlr_box render_box = {
       .x = 20,
       .y = 20,
-      .width = surface->current->width,
-      .height = surface->current->height
+      .width = surface->current->width * 2,
+      .height = surface->current->height * 2
     };
 
     float matrix[16];
@@ -120,16 +136,20 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
 }
 
 static void new_output_notify(struct wl_listener *listener, void *data) {
-  struct mcw_server *server;
+  printf("New Output Connected\n");
+  struct wm_server *server;
   server = wl_container_of(listener, server, new_output);
-  struct wlr_output *wlr_output = data;
 
+  struct wlr_output *wlr_output = data;
   if (!wl_list_empty(&wlr_output->modes)) {
     struct wlr_output_mode *mode = wl_container_of(wlr_output->modes.prev, mode, link);
     wlr_output_set_mode(wlr_output, mode);
   }
 
-  struct mcw_output *output = calloc(1, sizeof(struct mcw_output));
+  printf("Output %s Connected\n", wlr_output->name);
+
+  struct wm_output *output = calloc(1, sizeof(struct wm_output));
+
   clock_gettime(CLOCK_MONOTONIC, &output->last_frame);
   output->server = server;
   output->wlr_output = wlr_output;
@@ -144,14 +164,13 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
 	wlr_output_layout_add_auto(server->layout, wlr_output);
 
 	wlr_xcursor_manager_load(server->xcursor_manager, wlr_output->scale);
-	wlr_xcursor_manager_set_cursor_image(server->xcursor_manager, "left_ptr", server->cursor);
 
   wlr_output_create_global(wlr_output);
 }
 
 void keyboard_destroy_notify(struct wl_listener *listener, void *data) {
   printf("Destroy Keyboard\n");
-	struct sample_keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
+	struct wm_keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
 	wl_list_remove(&keyboard->destroy.link);
 	wl_list_remove(&keyboard->key.link);
 	free(keyboard);
@@ -168,7 +187,7 @@ void exec_command(const char* shell_cmd) {
 }
 
 void keyboard_key_notify(struct wl_listener *listener, void *data) {
-  struct sample_keyboard *keyboard = wl_container_of(listener, keyboard, key);
+  struct wm_keyboard *keyboard = wl_container_of(listener, keyboard, key);
 
 	struct wlr_event_keyboard_key *event = data;
 	uint32_t keycode = event->keycode + 8;
@@ -195,38 +214,35 @@ void keyboard_key_notify(struct wl_listener *listener, void *data) {
     if (sym == XKB_KEY_F5) {
       exec_command("chrome");
     }
-    if (sym == XKB_KEY_F5) {
+    if (sym == XKB_KEY_F6) {
       exec_command("weston-simple-shm");
     }
 	}
 }
 
 static void handle_cursor_motion(struct wl_listener *listener, void *data) {
-	struct mcw_server *server;
-  server = wl_container_of(listener, server, cursor_motion);
 	struct wlr_event_pointer_motion *event = data;
-	wlr_cursor_move(server->cursor, event->device, event->delta_x, event->delta_y);
+	struct wm_pointer *pointer;
+  pointer = wl_container_of(listener, pointer, cursor_motion);
+	wlr_cursor_move(pointer->cursor, event->device, event->delta_x, event->delta_y);
 }
 
 static void handle_cursor_motion_absolute(struct wl_listener *listener, void *data) {
   struct wlr_event_pointer_motion_absolute *event = data;
-  struct mcw_server *server;
-  server = wl_container_of(listener, server, cursor_motion_absolute);
-  wlr_cursor_warp_absolute(server->cursor, event->device, event->x, event->y);
-}
-
-void handle_xwayland_surface(struct wl_listener *listener, void *data) {
-  printf("handle_xwayland_surface\n");
+  struct wm_pointer *pointer;
+  pointer = wl_container_of(listener, pointer, cursor_motion_absolute);
+  wlr_cursor_warp_absolute(pointer->cursor, event->device, event->x, event->y);
 }
 
 void new_input_notify(struct wl_listener *listener, void *data) {
+  printf("New Input Connected\n");
 	struct wlr_input_device *device = data;
 
-  struct mcw_server *server;
+  struct wm_server *server;
   server = wl_container_of(listener, server, new_input);
 
   if (device->type == WLR_INPUT_DEVICE_KEYBOARD) {
-    struct sample_keyboard *keyboard = calloc(1, sizeof(struct sample_keyboard));
+    struct wm_keyboard *keyboard = calloc(1, sizeof(struct wm_keyboard));
     keyboard->device = device;
     keyboard->server = server;
 
@@ -258,13 +274,65 @@ void new_input_notify(struct wl_listener *listener, void *data) {
 
   if (device->type == WLR_INPUT_DEVICE_POINTER) {
     printf("Pointer Connected\n");
-    printf("%p\n", server);
-    wlr_cursor_attach_input_device(server->cursor, device);
+
+    struct wm_pointer *pointer = calloc(1, sizeof(struct wm_pointer));\
+    pointer->cursor = wlr_cursor_create();
+
+    wlr_cursor_attach_output_layout(pointer->cursor, server->layout);
+    wlr_cursor_attach_input_device(pointer->cursor, device);
+	  wlr_xcursor_manager_set_cursor_image(server->xcursor_manager, "left_ptr", pointer->cursor);
+
+  	wl_signal_add(&pointer->cursor->events.motion_absolute, &pointer->cursor_motion_absolute);
+	  pointer->cursor_motion_absolute.notify = handle_cursor_motion_absolute;
+
+    wl_signal_add(&pointer->cursor->events.motion, &pointer->cursor_motion);
+	  pointer->cursor_motion.notify = handle_cursor_motion;
   }
 }
 
+void handle_request_move(struct wl_listener *listener, void *data) {
+  // struct wlr_xwayland_surface *surface = data;
+  printf("Request move\n");
+}
+
+void handle_surface_commit(struct wl_listener *listener, void *data) {
+  // struct wlr_xwayland_surface *surface = data;
+  printf("Surface Commit\n");
+}
+
+void handle_xwayland_surface(struct wl_listener *listener, void *data) {
+  struct wlr_xwayland_surface *surface = data;
+  printf("New XWayland Surface\n");
+}
+
+void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
+  struct wlr_xdg_surface_v6 *surface = data;
+
+  if (surface->role == WLR_XDG_SURFACE_V6_ROLE_POPUP) {
+		printf("Popup requested, dropping\n");
+		return;
+	}
+
+  printf("New XDG Top Level Surface: Title=%s\n", surface->toplevel->title);
+  wlr_xdg_surface_v6_ping(surface);
+
+  struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
+
+  if (!wm_surface) {
+    fprintf(stderr, "Failed to created surface\n");
+  }
+
+  wlr_xdg_toplevel_v6_set_activated(surface, true);
+
+  wm_surface->surface_commit.notify = handle_surface_commit;
+	wl_signal_add(&surface->surface->events.commit, &wm_surface->surface_commit);
+
+  wm_surface->request_move.notify = handle_request_move;
+  wl_signal_add(&surface->toplevel->events.request_move, &wm_surface->request_move);
+}
+
 int main() {
-  struct mcw_server server;
+  struct wm_server server;
 
   server.wl_display = wl_display_create();
 
@@ -290,13 +358,7 @@ int main() {
 
   fprintf(stdout, "Created backend\n");
 
-  server.cursor = wlr_cursor_create();
-  printf("%p\n", server.cursor->state);
   server.layout = wlr_output_layout_create();
-
-  printf("Cursor created\n");
-
-  wlr_cursor_attach_output_layout(server.cursor, server.layout);
 
   server.xcursor_manager = wlr_xcursor_manager_create("default", 24);
 
@@ -304,14 +366,6 @@ int main() {
 		wlr_log(L_ERROR, "Failed to load left_ptr cursor");
 		return 1;
 	}
-
-	wlr_xcursor_manager_set_cursor_image(server.xcursor_manager, "left_ptr", server.cursor);
-
-	wl_signal_add(&server.cursor->events.motion_absolute, &server.cursor_motion_absolute);
-	server.cursor_motion_absolute.notify = handle_cursor_motion_absolute;
-
-  wl_signal_add(&server.cursor->events.motion, &server.cursor_motion);
-	server.cursor_motion.notify = handle_cursor_motion;
 
   wl_signal_add(&server.backend->events.new_input, &server.new_input);
 	server.new_input.notify = new_input_notify;
@@ -350,6 +404,11 @@ int main() {
   wlr_data_device_manager_create(server.wl_display);
   wlr_xdg_shell_v6_create(server.wl_display);
 
+  server.xdg_shell_v6 = wlr_xdg_shell_v6_create(server.wl_display);
+
+	wl_signal_add(&server.xdg_shell_v6->events.new_surface, &server.xdg_shell_v6_surface);
+	server.xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
+
   server.xwayland = wlr_xwayland_create(server.wl_display, server.compositor, false);
   wl_signal_add(&server.xwayland->events.new_surface, &server.xwayland_surface);
 	server.xwayland_surface.notify = handle_xwayland_surface;
@@ -358,9 +417,9 @@ int main() {
 
   wl_display_destroy(server.wl_display);
 
-  wlr_xcursor_manager_destroy(server.xcursor_manager);
-	wlr_cursor_destroy(server.cursor);
-	wlr_output_layout_destroy(server.layout);
+  // wlr_xcursor_manager_destroy(input.xcursor_manager);
+	// wlr_cursor_destroy(input.cursor);
+	// wlr_output_layout_destroy(server.layout);
 
   return 0;
 }
