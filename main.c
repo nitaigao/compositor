@@ -30,7 +30,10 @@
 #include <wlr/util/log.h>
 #include <xkbcommon/xkbcommon.h>
 
-
+enum roots_view_type {
+	WM_XDG_SHELL_V6_VIEW,
+	WM_XWAYLAND_VIEW,
+};
 struct wm_server {
   struct wl_display *wl_display;
   struct wlr_renderer *renderer;
@@ -63,8 +66,10 @@ struct wm_output {
 
 struct wm_surface {
   struct wl_listener map;
-  struct wm_server* server;
-  struct wlr_xdg_surface_v6* xdg_surface_v6;
+  struct wm_server *server;
+  struct wlr_xdg_surface_v6 *xdg_surface_v6;
+  struct wlr_xwayland_surface *xwayland_surface;
+  struct wlr_surface *surface;
   struct wl_listener commit;
 };
 
@@ -335,21 +340,37 @@ void new_input_notify(struct wl_listener *listener, void *data) {
   wlr_seat_set_capabilities(server->seat, server->seat->capabilities);
 }
 
-void handle_xwayland_surface(struct wl_listener *listener, void *data) {
-  struct wlr_xwayland_surface *surface = data;
-  printf("New XWayland Surface\n");
-  wlr_xwayland_surface_activate(surface, true);
-}
-
 void handle_map(struct wl_listener *listener, void *data) {
+  printf("handle_map\n");
   struct wm_surface *wm_surface;
   wm_surface = wl_container_of(listener, wm_surface, map);
 
   wlr_seat_keyboard_notify_enter(
     wm_surface->server->seat,
-    wm_surface->xdg_surface_v6->surface,
+    wm_surface->surface,
     NULL, 0, NULL
   );
+}
+
+void handle_xwayland_surface(struct wl_listener *listener, void *data) {
+  struct wlr_xwayland_surface *xwayland_surface = data;
+
+  struct wm_server *server;
+  server = wl_container_of(listener, server, xwayland_surface);
+
+  printf("New XWayland Surface\n");
+
+  wlr_xwayland_surface_ping(xwayland_surface);
+
+  struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
+  wm_surface->server = server;
+  wm_surface->xwayland_surface = xwayland_surface;
+  wm_surface->surface = xwayland_surface->surface;
+
+  wm_surface->map.notify = handle_map;
+	wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
+
+  // wlr_xwayland_surface_activate(xwayland_surface, true);
 }
 
 void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
@@ -369,6 +390,7 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
   wm_surface->xdg_surface_v6 = xdg_surface;
+  wm_surface->surface = xdg_surface->surface;
 
   if (!wm_surface) {
     fprintf(stderr, "Failed to created surface\n");
@@ -439,9 +461,9 @@ int main() {
   // wlr_idle_create(server.wl_display);
   // wlr_data_device_manager_create(server.wl_display);
 
-  // server.xwayland = wlr_xwayland_create(server.wl_display, server.compositor, false);
-  // wl_signal_add(&server.xwayland->events.new_surface, &server.xwayland_surface);
-  // server.xwayland_surface.notify = handle_xwayland_surface;
+  server.xwayland = wlr_xwayland_create(server.wl_display, server.compositor, false);
+  wl_signal_add(&server.xwayland->events.new_surface, &server.xwayland_surface);
+  server.xwayland_surface.notify = handle_xwayland_surface;
 
    if (!wlr_backend_start(server.backend)) {
     fprintf(stderr, "Failed to start backend\n");
