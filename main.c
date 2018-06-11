@@ -82,11 +82,20 @@ struct wm_keyboard {
   struct wl_listener destroy;
 };
 
+int WM_POINTER_MODE_FREE = 0;
+int WM_POINTER_MODE_MOVE = 1;
+
 struct wm_pointer {
   struct wlr_cursor *cursor;
+  struct wm_server *server;
   struct wl_listener cursor_motion_absolute;
   struct wl_listener cursor_motion;
   struct wl_listener button;
+  int mode;
+  double delta_x;
+  double delta_y;
+  double last_x;
+  double last_y;
 };
 
 struct wm_window {
@@ -123,7 +132,7 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
   float color[4] = {1.0, 0, 0, 1.0};
   wlr_renderer_clear(renderer, color);
 
-  int scale = 1;
+  int scale = 2;
 
   struct wm_window *window;
   wl_list_for_each_reverse(window, &server->windows, link) {
@@ -156,35 +165,6 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
     wlr_render_texture_with_matrix(renderer, surface->texture, matrix, 1.0f);
     wlr_surface_send_frame_done(surface, &now);
   }
-
-  // struct wl_resource *_surface;
-  // wl_resource_for_each(_surface, &server->compositor->surface_resources) {
-  //   struct wlr_surface *surface = wlr_surface_from_resource(_surface);
-
-  //   if (!wlr_surface_has_buffer(surface)) {
-  //     continue;
-  //   }
-
-  //   struct wlr_box render_box = {
-  //     .x = 20,
-  //     .y = 20,
-  //     .width = surface->current->width * scale,
-  //     .height = surface->current->height * scale
-  //   };
-
-  //   float matrix[16];
-
-  //   wlr_matrix_project_box(
-  //     matrix,
-  //     &render_box,
-  //     surface->current->transform,
-  //     0,
-  //     wlr_output->transform_matrix
-  //   );
-
-  //   wlr_render_texture_with_matrix(renderer, surface->texture, matrix, 1.0f);
-  //   wlr_surface_send_frame_done(surface, &now);
-  // }
 
   wlr_output_swap_buffers(wlr_output, NULL, NULL);
   wlr_renderer_end(renderer);
@@ -294,6 +274,14 @@ void keyboard_key_notify(struct wl_listener *listener, void *data) {
 
 static void handle_cursor_button(struct wl_listener *listener, void *data) {
   printf("Cursor button\n");
+  struct wlr_event_pointer_button *event = data;
+  struct wm_pointer *pointer = wl_container_of(listener, pointer, button);
+  if (event->state == WLR_BUTTON_PRESSED) {
+    pointer->mode = WM_POINTER_MODE_MOVE;
+  }
+  if (event->state == WLR_BUTTON_RELEASED) {
+    pointer->mode = WM_POINTER_MODE_FREE;
+  }
 }
 
 static void handle_cursor_motion(struct wl_listener *listener, void *data) {
@@ -301,6 +289,8 @@ static void handle_cursor_motion(struct wl_listener *listener, void *data) {
   struct wm_pointer *pointer;
   pointer = wl_container_of(listener, pointer, cursor_motion);
   wlr_cursor_move(pointer->cursor, event->device, event->delta_x, event->delta_y);
+  pointer->delta_x = event->delta_x;
+  pointer->delta_y = event->delta_y;
 }
 
 static void handle_cursor_motion_absolute(struct wl_listener *listener, void *data) {
@@ -308,6 +298,23 @@ static void handle_cursor_motion_absolute(struct wl_listener *listener, void *da
   struct wm_pointer *pointer;
   pointer = wl_container_of(listener, pointer, cursor_motion_absolute);
   wlr_cursor_warp_absolute(pointer->cursor, event->device, event->x, event->y);
+  pointer->delta_x = pointer->cursor->x - pointer->last_x;
+  pointer->delta_y = pointer->cursor->y - pointer->last_y;
+  pointer->last_x = pointer->cursor->x;
+  pointer->last_y = pointer->cursor->y;
+
+  if (pointer->mode == WM_POINTER_MODE_MOVE) {
+    int list_length = wl_list_length(&pointer->server->windows);
+
+    if (list_length > 0) {
+      struct wm_window *window;
+      wl_list_for_each(window, &pointer->server->windows, link) {
+        break;
+      }
+      window->x += pointer->delta_x;
+      window->y += pointer->delta_y;
+    }
+  }
 }
 
 void new_input_notify(struct wl_listener *listener, void *data) {
@@ -366,8 +373,14 @@ void new_input_notify(struct wl_listener *listener, void *data) {
   if (device->type == WLR_INPUT_DEVICE_POINTER) {
     printf("Pointer Connected\n");
 
-    struct wm_pointer *pointer = calloc(1, sizeof(struct wm_pointer));\
+    struct wm_pointer *pointer = calloc(1, sizeof(struct wm_pointer));
+    pointer->mode = WM_POINTER_MODE_FREE;
+    pointer->server = server;
     pointer->cursor = wlr_cursor_create();
+    pointer->last_x = 0;
+    pointer->last_y = 0;
+    pointer->delta_x = 0;
+    pointer->delta_y = 0;
 
     wlr_cursor_attach_output_layout(pointer->cursor, server->layout);
     wlr_cursor_attach_input_device(pointer->cursor, device);
