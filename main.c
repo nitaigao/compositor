@@ -43,16 +43,14 @@ struct wm_server {
   struct wl_listener new_input;
   struct wl_listener new_output;
   struct wl_list outputs;
-
+  struct wlr_output_layout *layout;
   struct wlr_xwayland *xwayland;
   struct wl_listener xwayland_surface;
-  struct wlr_output_layout *layout;
-
   struct wlr_xdg_shell_v6 *xdg_shell_v6;
   struct wl_listener xdg_shell_v6_surface;
   struct wlr_xcursor_manager *xcursor_manager;
-
   struct wlr_seat *seat;
+  struct wl_list windows;
 };
 
 struct wm_output {
@@ -66,11 +64,14 @@ struct wm_output {
 
 struct wm_surface {
   struct wl_listener map;
+  struct wl_listener unmap;
+  struct wl_listener request_move;
   struct wm_server *server;
   struct wlr_xdg_surface_v6 *xdg_surface_v6;
   struct wlr_xwayland_surface *xwayland_surface;
   struct wlr_surface *surface;
   struct wl_listener commit;
+  struct wm_window *window;
 };
 
 struct wm_keyboard {
@@ -85,6 +86,14 @@ struct wm_pointer {
   struct wlr_cursor *cursor;
   struct wl_listener cursor_motion_absolute;
   struct wl_listener cursor_motion;
+  struct wl_listener button;
+};
+
+struct wm_window {
+  int x;
+  int y;
+  struct wm_surface *surface;
+  struct wl_list link;
 };
 
 static void output_destroy_notify(struct wl_listener *listener, void *data) {
@@ -116,17 +125,20 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
 
   int scale = 1;
 
-  struct wl_resource *_surface;
-  wl_resource_for_each(_surface, &server->compositor->surface_resources) {
-    struct wlr_surface *surface = wlr_surface_from_resource(_surface);
+  struct wm_window *window;
+  wl_list_for_each_reverse(window, &server->windows, link) {
+    // printf("window\n");
+
+    struct wlr_surface *surface = window->surface->surface;
 
     if (!wlr_surface_has_buffer(surface)) {
+      printf("Surface has no buffer\n");
       continue;
     }
 
     struct wlr_box render_box = {
-      .x = 20,
-      .y = 20,
+      .x = window->x,
+      .y = window->y,
       .width = surface->current->width * scale,
       .height = surface->current->height * scale
     };
@@ -144,6 +156,35 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
     wlr_render_texture_with_matrix(renderer, surface->texture, matrix, 1.0f);
     wlr_surface_send_frame_done(surface, &now);
   }
+
+  // struct wl_resource *_surface;
+  // wl_resource_for_each(_surface, &server->compositor->surface_resources) {
+  //   struct wlr_surface *surface = wlr_surface_from_resource(_surface);
+
+  //   if (!wlr_surface_has_buffer(surface)) {
+  //     continue;
+  //   }
+
+  //   struct wlr_box render_box = {
+  //     .x = 20,
+  //     .y = 20,
+  //     .width = surface->current->width * scale,
+  //     .height = surface->current->height * scale
+  //   };
+
+  //   float matrix[16];
+
+  //   wlr_matrix_project_box(
+  //     matrix,
+  //     &render_box,
+  //     surface->current->transform,
+  //     0,
+  //     wlr_output->transform_matrix
+  //   );
+
+  //   wlr_render_texture_with_matrix(renderer, surface->texture, matrix, 1.0f);
+  //   wlr_surface_send_frame_done(surface, &now);
+  // }
 
   wlr_output_swap_buffers(wlr_output, NULL, NULL);
   wlr_renderer_end(renderer);
@@ -251,6 +292,10 @@ void keyboard_key_notify(struct wl_listener *listener, void *data) {
   );
 }
 
+static void handle_cursor_button(struct wl_listener *listener, void *data) {
+  printf("Cursor button\n");
+}
+
 static void handle_cursor_motion(struct wl_listener *listener, void *data) {
   struct wlr_event_pointer_motion *event = data;
   struct wm_pointer *pointer;
@@ -334,6 +379,9 @@ void new_input_notify(struct wl_listener *listener, void *data) {
     wl_signal_add(&pointer->cursor->events.motion, &pointer->cursor_motion);
     pointer->cursor_motion.notify = handle_cursor_motion;
 
+    wl_signal_add(&pointer->cursor->events.button, &pointer->button);
+	  pointer->button.notify = handle_cursor_button;
+
     server->seat->capabilities |= WL_SEAT_CAPABILITY_POINTER;
   }
 
@@ -350,6 +398,40 @@ void handle_map(struct wl_listener *listener, void *data) {
     wm_surface->surface,
     NULL, 0, NULL
   );
+
+  struct wm_window *window = calloc(1, sizeof(struct wm_window));
+  window->x = 0;
+  window->y = 0;
+  window->surface = wm_surface;
+
+  wm_surface->window = window;
+
+  wl_list_insert(&wm_surface->server->windows, &window->link);
+}
+
+void handle_unmap(struct wl_listener *listener, void *data) {
+  printf("handle_unmap\n");
+  struct wm_surface *wm_surface;
+  wm_surface = wl_container_of(listener, wm_surface, unmap);
+
+  wl_list_remove(&wm_surface->window->link);
+
+  int list_length = wl_list_length(&wm_surface->server->windows);
+
+  if (list_length > 0) {
+    struct wm_window *window;
+    wl_list_for_each(window, &wm_surface->server->windows, link) {
+      break;
+    }
+
+    wlr_seat_keyboard_notify_enter(
+      window->surface->server->seat,
+      window->surface->surface,
+      NULL, 0, NULL
+    );
+
+    // wlr_xdg_toplevel_v6_set_activated(window->surface->xdg_surface_v6, true);
+  }
 }
 
 void handle_xwayland_surface(struct wl_listener *listener, void *data) {
@@ -368,9 +450,13 @@ void handle_xwayland_surface(struct wl_listener *listener, void *data) {
   wm_surface->surface = xwayland_surface->surface;
 
   wm_surface->map.notify = handle_map;
-	wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
+  wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
 
   // wlr_xwayland_surface_activate(xwayland_surface, true);
+ }
+
+void handle_request_move(struct wl_listener *listener, void *data) {
+  printf("Request move\n");
 }
 
 void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
@@ -400,10 +486,17 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
 
   wm_surface->map.notify = handle_map;
 	wl_signal_add(&xdg_surface->events.map, &wm_surface->map);
+
+  wm_surface->unmap.notify = handle_unmap;
+  wl_signal_add(&xdg_surface->events.unmap, &wm_surface->unmap);
+
+  wm_surface->request_move.notify = handle_request_move;
+  wl_signal_add(&xdg_surface->toplevel->events.request_move, &wm_surface->request_move);
 }
 
 int main() {
   struct wm_server server;
+  wl_list_init(&server.windows);
   server.seat = 0;
 
   server.wl_display = wl_display_create();
@@ -457,15 +550,11 @@ int main() {
   wl_signal_add(&server.xdg_shell_v6->events.new_surface, &server.xdg_shell_v6_surface);
   server.xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
 
-  // wlr_screenshooter_create(server.wl_display);
-  // wlr_idle_create(server.wl_display);
-  // wlr_data_device_manager_create(server.wl_display);
-
   server.xwayland = wlr_xwayland_create(server.wl_display, server.compositor, false);
   wl_signal_add(&server.xwayland->events.new_surface, &server.xwayland_surface);
   server.xwayland_surface.notify = handle_xwayland_surface;
 
-   if (!wlr_backend_start(server.backend)) {
+  if (!wlr_backend_start(server.backend)) {
     fprintf(stderr, "Failed to start backend\n");
     wl_display_destroy(server.wl_display);
     return 1;
