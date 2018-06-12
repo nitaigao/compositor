@@ -49,6 +49,8 @@ struct wm_server {
   struct wlr_xdg_shell_v6 *xdg_shell_v6;
   struct wl_listener xdg_shell_v6_surface;
   struct wlr_xcursor_manager *xcursor_manager;
+
+  struct wlr_data_device_manager *data_device_manager;
   struct wlr_seat *seat;
   struct wl_list windows;
 };
@@ -130,8 +132,6 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
   float color[4] = {1.0, 0, 0, 1.0};
   wlr_renderer_clear(renderer, color);
 
-  int scale = 2;
-
   struct wm_window *window;
   wl_list_for_each_reverse(window, &server->windows, link) {
     struct wlr_surface *surface = window->surface->surface;
@@ -144,8 +144,8 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
     struct wlr_box render_box = {
       .x = window->x,
       .y = window->y,
-      .width = surface->current->width * scale,
-      .height = surface->current->height * scale
+      .width = surface->current->width * output->wlr_output->scale,
+      .height = surface->current->height * output->wlr_output->scale
     };
 
     float matrix[16];
@@ -191,7 +191,11 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
   output->frame.notify = output_frame_notify;
   wl_signal_add(&wlr_output->events.frame, &output->frame);
 
-  wlr_output_layout_add_auto(server->layout, wlr_output);
+  wlr_output_set_scale(wlr_output, 2.0f);
+	wlr_output_set_transform(wlr_output, WL_OUTPUT_TRANSFORM_NORMAL);
+	wlr_output_layout_add(server->layout, wlr_output, 0, 0);
+
+  // wlr_output_layout_add_auto(server->layout, wlr_output);
 
   wlr_xcursor_manager_load(server->xcursor_manager, wlr_output->scale);
 
@@ -242,7 +246,7 @@ void keyboard_key_notify(struct wl_listener *listener, void *data) {
         exec_command("weston-terminal");
       }
       if (sym == XKB_KEY_F2) {
-        exec_command("weston-editor");
+        exec_command("gnome-terminal");
       }
       if (sym == XKB_KEY_F5) {
         exec_command("chrome");
@@ -264,34 +268,44 @@ void keyboard_key_notify(struct wl_listener *listener, void *data) {
 }
 
 static void handle_cursor_button(struct wl_listener *listener, void *data) {
-  printf("Cursor button\n");
   struct wlr_event_pointer_button *event = data;
   struct wm_pointer *pointer = wl_container_of(listener, pointer, button);
-  if (event->state == WLR_BUTTON_PRESSED) {
-    pointer->mode = WM_POINTER_MODE_MOVE;
-  }
-  if (event->state == WLR_BUTTON_RELEASED) {
-    pointer->mode = WM_POINTER_MODE_FREE;
-  }
+  // if (event->state == WLR_BUTTON_PRESSED) {
+  //   pointer->mode = WM_POINTER_MODE_MOVE;
+  // }
+
+  // if (event->state == WLR_BUTTON_RELEASED) {
+  //   pointer->mode = WM_POINTER_MODE_FREE;
+  // }
+
+  wlr_seat_pointer_notify_button(pointer->server->seat, event->time_msec, event->button, event->state);
 }
 
-static void handle_motion(struct wm_pointer *pointer) {
-  pointer->delta_x = pointer->cursor->x - pointer->last_x;
-  pointer->delta_y = pointer->cursor->y - pointer->last_y;
-  pointer->last_x = pointer->cursor->x;
-  pointer->last_y = pointer->cursor->y;
+static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
+  pointer->delta_x = pointer->cursor->x * 2 - pointer->last_x;
+  pointer->delta_y = pointer->cursor->y * 2 - pointer->last_y;
+  pointer->last_x = pointer->cursor->x * 2;
+  pointer->last_y = pointer->cursor->y * 2;
 
-  if (pointer->mode == WM_POINTER_MODE_MOVE) {
-    int list_length = wl_list_length(&pointer->server->windows);
+  int list_length = wl_list_length(&pointer->server->windows);
 
-    if (list_length > 0) {
-      struct wm_window *window;
-      wl_list_for_each(window, &pointer->server->windows, link) {
-        break;
-      }
-      window->x += pointer->delta_x;
-      window->y += pointer->delta_y;
+  if (list_length > 0) {
+    struct wm_window *window;
+    wl_list_for_each(window, &pointer->server->windows, link) {
+      break;
     }
+
+    if (pointer->mode == WM_POINTER_MODE_MOVE) {
+      int list_length = wl_list_length(&pointer->server->windows);
+
+      if (list_length > 0) {
+        window->x += pointer->delta_x;
+        window->y += pointer->delta_y;
+      }
+    }
+
+    wlr_seat_pointer_notify_enter(pointer->server->seat, window->surface->surface, pointer->cursor->x, pointer->cursor->y);
+    wlr_seat_pointer_notify_motion(pointer->server->seat, time, pointer->cursor->x, pointer->cursor->y);
   }
 }
 
@@ -299,14 +313,14 @@ static void handle_cursor_motion(struct wl_listener *listener, void *data) {
   struct wlr_event_pointer_motion *event = data;
   struct wm_pointer *pointer = wl_container_of(listener, pointer, cursor_motion);
   wlr_cursor_move(pointer->cursor, event->device, event->delta_x, event->delta_y);
-  handle_motion(pointer);
+  handle_motion(pointer, event->time_msec);
 }
 
 static void handle_cursor_motion_absolute(struct wl_listener *listener, void *data) {
   struct wlr_event_pointer_motion_absolute *event = data;
   struct wm_pointer *pointer = wl_container_of(listener, pointer, cursor_motion_absolute);
   wlr_cursor_warp_absolute(pointer->cursor, event->device, event->x, event->y);
-  handle_motion(pointer);
+  handle_motion(pointer, event->time_msec);
 }
 
 void new_input_notify(struct wl_listener *listener, void *data) {
@@ -528,7 +542,7 @@ int main() {
   fprintf(stdout, "Got socket\n");
 
   server.renderer = wlr_backend_get_renderer(server.backend);
-  server.compositor = wlr_compositor_create(server.wl_display,  server.renderer);
+  server.compositor = wlr_compositor_create(server.wl_display, server.renderer);
 
   wlr_renderer_init_wl_display(server.renderer, server.wl_display);
   wlr_primary_selection_device_manager_create(server.wl_display);
@@ -539,6 +553,8 @@ int main() {
   server.xdg_shell_v6 = wlr_xdg_shell_v6_create(server.wl_display);
   wl_signal_add(&server.xdg_shell_v6->events.new_surface, &server.xdg_shell_v6_surface);
   server.xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
+
+  server.data_device_manager = wlr_data_device_manager_create(server.wl_display);
 
   server.xwayland = wlr_xwayland_create(server.wl_display, server.compositor, false);
   wl_signal_add(&server.xwayland->events.new_surface, &server.xwayland_surface);
