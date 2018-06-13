@@ -86,24 +86,26 @@ void new_input_notify(struct wl_listener *listener, void *data) {
 
 void handle_map(struct wl_listener *listener, void *data) {
   printf("handle_map\n");
-  struct wm_surface *wm_surface = wl_container_of(listener, wm_surface, map);
+  struct wm_surface *surface = wl_container_of(listener, surface, map);
 
   printf("map\n");
-
-  // wlr_seat_keyboard_notify_enter(
-  //   wm_surface->server->input->seat,
-  //   wm_surface->surface,
-  //   NULL, 0, NULL
-  // );
 
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
   window->x = 0;
   window->y = 0;
-  window->surface = wm_surface;
+  window->surface = surface;
 
-  wm_surface->window = window;
+  surface->window = window;
 
-  wl_list_insert(&wm_surface->server->windows, &window->link);
+  wl_list_insert(&surface->server->windows, &window->link);
+
+  struct wm_seat *seat = wm_server_find_or_create_seat(window->surface->server, WM_DEFAULT_SEAT);
+
+  wlr_seat_keyboard_notify_enter(
+    seat->seat,
+    surface->surface,
+    NULL, 0, NULL
+  );
 }
 
 void handle_unmap(struct wl_listener *listener, void *data) {
@@ -137,7 +139,6 @@ void handle_move(struct wl_listener *listener, void *data) {
   struct wm_surface *surface = wl_container_of(listener, surface, move);
   struct wlr_wl_shell_surface_move_event *event = data;
   struct wm_seat *seat = wm_server_find_or_create_seat(surface->server, event->seat->seat->name);
-  // wm_surface->server
   seat->pointer->mode = WM_POINTER_MODE_MOVE;
 }
 
