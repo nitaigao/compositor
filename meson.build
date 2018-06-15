@@ -12,6 +12,7 @@ executable('compositor',
   'src/wm_server.c',
   'src/wm_output.c',
   'src/wm_keyboard.c',
+  'src/wm_window.c',
   include_directories: include_directories,
   dependencies: [wlroots, wayland, xkbcommon]
 )

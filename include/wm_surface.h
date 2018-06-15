@@ -1,7 +1,13 @@
 #ifndef __WM_SURFACE_H
 #define __WM_SURFACE_H
 
+#define WM_SURFACE_TYPE_X11 0
+#define WM_SURFACE_TYPE_XDG_V6 1
+
 struct wm_surface {
+  int type;
+  double scale;
+
   struct wm_server *server;
   struct wm_window *window;
 

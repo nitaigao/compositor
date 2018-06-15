@@ -37,9 +37,6 @@ void keyboard_key_notify(struct wl_listener *listener, void *data) {
 static void handle_cursor_button(struct wl_listener *listener, void *data) {
   struct wlr_event_pointer_button *event = data;
   struct wm_pointer *pointer = wl_container_of(listener, pointer, button);
-  // if (event->state == WLR_BUTTON_PRESSED) {
-  //   pointer->mode = WM_POINTER_MODE_MOVE;
-  // }
 
   if (event->state == WLR_BUTTON_RELEASED) {
     pointer->mode = WM_POINTER_MODE_FREE;
@@ -71,10 +68,8 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
       }
     }
 
-    float local_x = pointer->cursor->x - window->x;
-    float local_y = pointer->cursor->y - window->y;
-
-    // printf("%f %f %f %f \n", window->x, window->y, pointer->cursor->x - window->x, pointer->cursor->y - window->y);
+    float local_x = (pointer->cursor->x - window->x) * (2.0 / window->surface->scale);
+    float local_y = (pointer->cursor->y - window->y) * (2.0 / window->surface->scale);
 
     wlr_seat_pointer_notify_enter(pointer->seat->seat, window->surface->surface, local_x, local_y);
     wlr_seat_pointer_notify_motion(pointer->seat->seat, time, local_x, local_y);

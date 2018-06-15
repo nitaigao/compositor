@@ -40,7 +40,7 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard, struct wlr_event_keyboa
         exec_command("gnome-terminal");
       }
       if (sym == XKB_KEY_F5) {
-        exec_command("chrome");
+        exec_command("chrome --force-device-scale-factor=2");
       }
       if (sym == XKB_KEY_F6) {
         exec_command("weston-simple-shm");

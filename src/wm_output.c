@@ -31,6 +31,10 @@ void wm_output_render(struct wm_output* output) {
   wl_list_for_each_reverse(window, &server->windows, link) {
     struct wlr_surface *surface = window->surface->surface;
 
+    if (surface == NULL) {
+      continue;
+    }
+
     if (!wlr_surface_has_buffer(surface)) {
       printf("Surface has no buffer\n");
       continue;
@@ -39,8 +43,8 @@ void wm_output_render(struct wm_output* output) {
     struct wlr_box render_box = {
       .x = window->x * output->wlr_output->scale,
       .y = window->y * output->wlr_output->scale,
-      .width = surface->current->width * output->wlr_output->scale,
-      .height = surface->current->height * output->wlr_output->scale
+      .width = surface->current->width * window->surface->scale,
+      .height = surface->current->height * window->surface->scale
     };
 
     float matrix[16];

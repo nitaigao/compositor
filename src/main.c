@@ -66,13 +66,8 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
   output->frame.notify = output_frame_notify;
   wl_signal_add(&wlr_output->events.frame, &output->frame);
 
-  wlr_output_set_scale(wlr_output, 2.0f);
-	wlr_output_set_transform(wlr_output, WL_OUTPUT_TRANSFORM_NORMAL);
-	wlr_output_layout_add(server->layout, wlr_output, 0, 0);
-
-  // wlr_output_layout_add_auto(server->layout, wlr_output);
-
-  wlr_xcursor_manager_load(server->xcursor_manager, wlr_output->scale);
+  wlr_output_set_scale(wlr_output, 2);
+  wlr_output_layout_add_auto(server->layout, wlr_output);
 
   wlr_output_create_global(wlr_output);
 }
@@ -88,7 +83,13 @@ void handle_map(struct wl_listener *listener, void *data) {
   printf("handle_map\n");
   struct wm_surface *surface = wl_container_of(listener, surface, map);
 
-  printf("map\n");
+  if (surface->type == WM_SURFACE_TYPE_X11) {
+    surface->surface = surface->xwayland_surface->surface;
+  }
+
+  if (surface->type == WM_SURFACE_TYPE_XDG_V6) {
+    surface->surface = surface->xdg_surface_v6->surface;
+  }
 
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
   window->x = 0;
@@ -106,6 +107,8 @@ void handle_map(struct wl_listener *listener, void *data) {
     surface->surface,
     NULL, 0, NULL
   );
+
+  window_focus(window);
 }
 
 void handle_unmap(struct wl_listener *listener, void *data) {
@@ -129,8 +132,6 @@ void handle_unmap(struct wl_listener *listener, void *data) {
       window->surface->surface,
       NULL, 0, NULL
     );
-
-    wlr_xdg_toplevel_v6_set_activated(window->surface->xdg_surface_v6, true);
   }
 }
 
@@ -153,13 +154,12 @@ void handle_xwayland_surface(struct wl_listener *listener, void *data) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
   wm_surface->xwayland_surface = xwayland_surface;
-  wm_surface->surface = xwayland_surface->surface;
+  wm_surface->type = WM_SURFACE_TYPE_X11;
+  wm_surface->scale = 1.0;
 
   wm_surface->map.notify = handle_map;
   wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
-
-  // wlr_xwayland_surface_activate(xwayland_surface, true);
- }
+}
 
 void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
   struct wlr_xdg_surface_v6 *xdg_surface = data;
@@ -176,7 +176,8 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
   wm_surface->xdg_surface_v6 = xdg_surface;
-  wm_surface->surface = xdg_surface->surface;
+  wm_surface->type = WM_SURFACE_TYPE_XDG_V6;
+  wm_surface->scale = 2.0;
 
   if (!wm_surface) {
     fprintf(stderr, "Failed to created surface\n");
@@ -196,6 +197,7 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
 
 int main() {
   struct wm_server server;
+
   wl_list_init(&server.windows);
   wl_list_init(&server.seats);
 
@@ -235,8 +237,6 @@ int main() {
     fprintf(stderr, "Failed to get socket\n");
   }
 
-  fprintf(stdout, "Got socket\n");
-
   server.renderer = wlr_backend_get_renderer(server.backend);
   server.compositor = wlr_compositor_create(server.wl_display, server.renderer);
 
@@ -252,9 +252,26 @@ int main() {
 
   server.data_device_manager = wlr_data_device_manager_create(server.wl_display);
 
-  server.xwayland = wlr_xwayland_create(server.wl_display, server.compositor, false);
+  server.xwayland = wlr_xwayland_create(server.wl_display, server.compositor, true);
   wl_signal_add(&server.xwayland->events.new_surface, &server.xwayland_surface);
   server.xwayland_surface.notify = handle_xwayland_surface;
+
+  wlr_xcursor_manager_load(server.xcursor_manager, 1);
+  wlr_xcursor_manager_load(server.xcursor_manager, 2);
+
+  struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(server.xcursor_manager, "left_ptr", 1);
+  if (xcursor != NULL) {
+    struct wlr_xcursor_image *image = xcursor->images[0];
+    wlr_xwayland_set_cursor(
+      server.xwayland,
+      image->buffer,
+      image->width * 4,
+      image->width,
+      image->height,
+      image->hotspot_x,
+      image->hotspot_y
+    );
+  }
 
   if (!wlr_backend_start(server.backend)) {
     fprintf(stderr, "Failed to start backend\n");
