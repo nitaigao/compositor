@@ -1,0 +1,54 @@
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Leak
+   ...
+   obj:*/usr/lib/dri/i965_dri.so
+}
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Addr1
+   ...
+   obj:*/usr/lib/dri/i965_dri.so
+}
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Addr2
+   ...
+   obj:*/usr/lib/dri/i965_dri.so
+}
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Addr4
+   ...
+   obj:*/usr/lib/dri/i965_dri.so
+}
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Addr8
+   ...
+   obj:*/usr/lib/dri/i965_dri.so
+}
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Leak
+   ...
+   obj:*/usr/lib/ld-2.27.so
+}
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Leak
+   ...
+   obj:*/usr/lib/ld-2.27.so
+}
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Leak
+   ...
+   obj:*/usr/lib/libxcb.so.1.1.0
+}
+{
+   ignore_libcrypto_conditional_jump_errors
+   Memcheck:Leak
+   ...
+   obj:*/usr/lib/libEGL.so.1.0.0
+}

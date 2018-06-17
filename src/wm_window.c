@@ -5,7 +5,7 @@
 
 #include "wm_surface.h"
 
-void window_focus(struct wm_window* window) {
+void wm_window_focus(struct wm_window* window) {
   if (window->surface->type == WM_SURFACE_TYPE_X11) {
     wlr_xwayland_surface_activate(window->surface->xwayland_surface, true);
   }

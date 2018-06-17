@@ -11,6 +11,6 @@ struct wm_window {
   struct wl_list link;
 };
 
-void window_focus(struct wm_window* window);
+void wm_window_focus(struct wm_window* window);
 
 #endif

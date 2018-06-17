@@ -11,16 +11,15 @@
 
 #include "wm_server.h"
 #include "wm_pointer.h"
+#include "wm_seat.h"
 #include "wm_window.h"
 #include "wm_surface.h"
 #include "wm_keyboard.h"
 
-void keyboard_destroy_notify(struct wl_listener *listener, void *data) {
-  printf("Destroy Keyboard\n");
-  struct wm_keyboard *keyboard = wl_container_of(listener, keyboard, destroy);
-  wl_list_remove(&keyboard->destroy.link);
-  wl_list_remove(&keyboard->key.link);
-  free(keyboard);
+void seat_destroy_notify(struct wl_listener *listener, void *data) {
+  printf("seat_destroy_notify\n");
+  struct wm_seat *seat = wl_container_of(listener, seat, destroy);
+  wm_seat_destroy(seat);
 }
 
 void keyboard_modifiers_notify(struct wl_listener *listener, void *data) {
@@ -90,6 +89,21 @@ static void handle_cursor_motion_absolute(struct wl_listener *listener, void *da
   handle_motion(pointer, event->time_msec);
 }
 
+void wm_seat_destroy(struct wm_seat* seat) {
+  struct wm_keyboard *keyboard, *tmp;
+  wl_list_for_each_safe(keyboard, tmp, &seat->keyboards, link) {
+    wm_keyboard_destroy(keyboard);
+  }
+
+  wlr_cursor_destroy(seat->pointer->cursor);
+  free(seat->pointer);
+
+  wl_list_remove(&seat->link);
+  wl_list_remove(&seat->destroy.link);
+
+  free(seat);
+}
+
 void wm_seat_create_pointer(struct wm_seat* seat) {
   seat->pointer = calloc(1, sizeof(struct wm_pointer));
   seat->pointer->mode = WM_POINTER_MODE_FREE;
@@ -127,6 +141,8 @@ void wm_seat_attach_keyboard_device(struct wm_seat* seat, struct wlr_input_devic
     keyboard->device = device;
     keyboard->seat = seat;
 
+    wl_list_insert(&seat->keyboards, &keyboard->link);
+
     int repeat_rate = 25;
     int repeat_delay = 600;
     wlr_keyboard_set_repeat_info(device->keyboard, repeat_rate, repeat_delay);
@@ -156,5 +172,31 @@ void wm_seat_attach_keyboard_device(struct wm_seat* seat, struct wlr_input_devic
     struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
     wlr_keyboard_set_keymap(device->keyboard, keymap);
+
     xkb_context_unref(context);
+    xkb_keymap_unref(keymap);
+}
+
+struct wm_seat* wm_seat_find_or_create(struct wm_server* server, const char* seat_name) {
+  struct wm_seat *seat;
+  wl_list_for_each(seat, &server->seats, link) {
+    if (strcmp(seat->name, seat_name) == 0) {
+      return seat;
+    }
+  }
+
+  seat = calloc(1, sizeof(struct wm_seat));
+  seat->seat = wlr_seat_create(server->wl_display, seat_name);
+  seat->server = server;
+  strcpy(seat->name, seat_name);
+
+  printf("Created seat: %s\n", seat->name);
+
+  wl_list_init(&seat->keyboards);
+  wl_list_insert(&server->seats, &seat->link);
+
+  wl_signal_add(&seat->seat->events.destroy, &seat->destroy);
+  seat->destroy.notify = seat_destroy_notify;
+
+  return seat;
 }

@@ -11,6 +11,12 @@
 #include "wm_server.h"
 #include "wm_seat.h"
 
+void wm_keyboard_destroy(struct wm_keyboard* keyboard) {
+  wl_list_remove(&keyboard->link);
+  // wl_list_remove(&keyboard->destroy.link);
+  free(keyboard);
+}
+
 void exec_command(const char* shell_cmd) {
   printf("Execute %s\n", shell_cmd);
   pid_t pid = fork();
@@ -38,6 +44,12 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard, struct wlr_event_keyboa
       }
       if (sym == XKB_KEY_F2) {
         exec_command("gnome-terminal");
+      }
+      if (sym == XKB_KEY_F3) {
+        exec_command("gnome-calendar");
+      }
+      if (sym == XKB_KEY_F4) {
+        exec_command("gnome-calculator");
       }
       if (sym == XKB_KEY_F5) {
         exec_command("chrome --force-device-scale-factor=2");
