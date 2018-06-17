@@ -104,14 +104,14 @@ void wm_output_render(struct wm_output* output) {
 
   struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
 
-  struct timespec now;
-  clock_gettime(CLOCK_MONOTONIC, &now);
-
   wlr_output_make_current(wlr_output, NULL);
   wlr_renderer_begin(renderer, wlr_output->width, wlr_output->height);
 
   float color[4] = { 1.0, 0, 0, 1.0 };
   wlr_renderer_clear(renderer, color);
+
+  struct timespec now;
+  clock_gettime(CLOCK_MONOTONIC, &now);
 
   struct wm_window *window;
   wl_list_for_each_reverse(window, &server->windows, link) {
@@ -123,9 +123,13 @@ void wm_output_render(struct wm_output* output) {
     if (window->surface->type == WM_SURFACE_TYPE_XDG) {
       wlr_xdg_surface_for_each_surface(window->surface->xdg_surface, render_surface, &render_data);
     }
+
     if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
       wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6, render_surface, &render_data);
     }
+  }
+
+  wl_list_for_each_reverse(window, &server->windows, link) {
     wlr_surface_send_frame_done(window->surface->surface, &now);
   }
 

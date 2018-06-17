@@ -8,6 +8,9 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/util/log.h>
+#include <wlr/types/wlr_xdg_shell_v6.h>
+#include <wlr/types/wlr_xdg_shell.h>
+
 
 #include "wm_server.h"
 #include "wm_pointer.h"
@@ -67,11 +70,36 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
       }
     }
 
-    float local_x = (pointer->cursor->x - window->x) * (2.0 / window->surface->scale);
-    float local_y = (pointer->cursor->y - window->y) * (2.0 / window->surface->scale);
+    double local_x = (pointer->cursor->x - window->x) * (2.0 / window->surface->scale);
+    double local_y = (pointer->cursor->y - window->y) * (2.0 / window->surface->scale);
 
-    wlr_seat_pointer_notify_enter(pointer->seat->seat, window->surface->surface, local_x, local_y);
-    wlr_seat_pointer_notify_motion(pointer->seat->seat, time, local_x, local_y);
+    if (window->surface->type == WM_SURFACE_TYPE_XDG) {
+      double sx, sy;
+
+      struct wlr_surface *surface = wlr_xdg_surface_surface_at(window->surface->xdg_surface, local_x, local_y, &sx, &sy);
+
+      if (surface) {
+        printf("xdg %p %f %f %f %f\n", surface, sx, sy, local_x, local_y);
+        wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
+        wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
+      } else {
+        wlr_seat_pointer_clear_focus(pointer->seat->seat);
+      }
+    }
+
+    if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
+      double sx, sy;
+
+      struct wlr_surface *surface = wlr_xdg_surface_v6_surface_at(window->surface->xdg_surface_v6, local_x, local_y, &sx, &sy);
+
+      if (surface) {
+        printf("xdg v6 %p %f %f %f %f\n", surface, sx, sy, local_x, local_y);
+        wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
+        wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
+      } else {
+        wlr_seat_pointer_clear_focus(pointer->seat->seat);
+      }
+    }
   }
 }
 

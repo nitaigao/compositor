@@ -142,10 +142,10 @@ void handle_xdg_shell_surface(struct wl_listener *listener, void *data) {
   struct wlr_xdg_surface *xdg_surface = data;
   struct wm_server *server = wl_container_of(listener, server, xdg_shell_surface);
 
-  // // if (xdg_surface->role == WLR_XDG_SURFACE_V6_ROLE_POPUP) {
-  // //   printf("Popup requested, dropping\n");
-  // //   return;
-  // // }
+  if (xdg_surface->role == WLR_XDG_SURFACE_V6_ROLE_POPUP) {
+    printf("Popup requested, dropping\n");
+    return;
+  }
 
   printf("New XDG Surface: Title=%s\n", xdg_surface->toplevel->title);
   wlr_xdg_surface_ping(xdg_surface);
@@ -157,10 +157,10 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
   struct wlr_xdg_surface_v6 *xdg_surface = data;
   struct wm_server *server = wl_container_of(listener, server, xdg_shell_v6_surface);
 
-  // if (xdg_surface->role == WLR_XDG_SURFACE_V6_ROLE_POPUP) {
-  //   printf("Popup requested, dropping\n");
-  //   return;
-  // }
+  if (xdg_surface->role == WLR_XDG_SURFACE_V6_ROLE_POPUP) {
+    printf("Popup requested, dropping\n");
+    return;
+  }
 
   printf("New XDG V6 Surface: Title=%s\n", xdg_surface->toplevel->title);
   wlr_xdg_surface_v6_ping(xdg_surface);
@@ -244,7 +244,6 @@ struct wm_server* wm_server_create() {
   server->xdg_shell = wlr_xdg_shell_create(server->wl_display);
   wl_signal_add(&server->xdg_shell->events.new_surface, &server->xdg_shell_surface);
   server->xdg_shell_surface.notify = handle_xdg_shell_surface;
-
 
   server->data_device_manager = wlr_data_device_manager_create(server->wl_display);
 

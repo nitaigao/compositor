@@ -37,7 +37,7 @@ void handle_map(struct wl_listener *listener, void *data) {
 
   // if (surface->type == WM_SURFACE_TYPE_X11) {
   //   surface->surface = surface->xwayland_surface->surface;
-  // } else
+  // } elsewlr_output_damage_add_box
 
   if (surface->type == WM_SURFACE_TYPE_XDG) {
     surface->surface = surface->xdg_surface->surface;

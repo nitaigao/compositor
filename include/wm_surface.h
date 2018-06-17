@@ -25,6 +25,7 @@ struct wm_surface {
   struct wl_listener unmap;
   struct wl_listener move;
   struct wl_listener new_popup;
+  struct wl_listener new_subsurface;
 };
 
 struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server);
