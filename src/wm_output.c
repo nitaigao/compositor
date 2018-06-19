@@ -77,7 +77,7 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
   struct wm_window* window = render_data->window;
   struct wm_output* output = render_data->output;
 
-  struct wlr_box render_box = {
+  struct wlr_box box = {
     .x = (window->x + sx) * output->wlr_output->scale,
     .y = (window->y + sy) * output->wlr_output->scale,
     .width = surface->current->width * window->surface->scale,
@@ -86,13 +86,8 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
 
   float matrix[16];
 
-  wlr_matrix_project_box(
-    matrix,
-    &render_box,
-    surface->current->transform,
-    0,
-    output->wlr_output->transform_matrix
-  );
+  enum wl_output_transform transform = wlr_output_transform_invert(surface->current->transform);
+	wlr_matrix_project_box(matrix, &box, transform, 0, output->wlr_output->transform_matrix);
 
   struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
   wlr_render_texture_with_matrix(renderer, surface->texture, matrix, 1.0f);

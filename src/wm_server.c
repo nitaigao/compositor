@@ -142,7 +142,7 @@ void handle_xdg_shell_surface(struct wl_listener *listener, void *data) {
   struct wlr_xdg_surface *xdg_surface = data;
   struct wm_server *server = wl_container_of(listener, server, xdg_shell_surface);
 
-  if (xdg_surface->role == WLR_XDG_SURFACE_V6_ROLE_POPUP) {
+  if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_POPUP) {
     printf("Popup requested, dropping\n");
     return;
   }
