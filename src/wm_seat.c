@@ -85,17 +85,6 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
         wlr_seat_pointer_clear_focus(pointer->seat->seat);
       }
     }
-
-    if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
-      double sx, sy;
-
-      struct wlr_surface *surface = wlr_xdg_surface_v6_surface_at(window->surface->xdg_surface_v6, local_x, local_y, &sx, &sy);
-
-      if (surface) {
-        wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
-        wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
-      }
-    }
   }
 }
 

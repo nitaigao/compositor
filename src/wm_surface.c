@@ -160,8 +160,6 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, st
   wm_surface->type = WM_SURFACE_TYPE_XDG;
   wm_surface->scale = 2.0;
 
-  printf("################################################################################### Role: %d\n", xdg_surface->role);
-
   if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
     wlr_xdg_toplevel_set_activated(xdg_surface, true);
   }
