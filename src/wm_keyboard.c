@@ -13,7 +13,6 @@
 
 void wm_keyboard_destroy(struct wm_keyboard* keyboard) {
   wl_list_remove(&keyboard->link);
-  // wl_list_remove(&keyboard->destroy.link);
   free(keyboard);
 }
 

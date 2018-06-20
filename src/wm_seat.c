@@ -48,7 +48,7 @@ static void handle_cursor_button(struct wl_listener *listener, void *data) {
 }
 
 static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
-  pointer->delta_x = pointer->cursor->x  - pointer->last_x;
+  pointer->delta_x = pointer->cursor->x - pointer->last_x;
   pointer->delta_y = pointer->cursor->y - pointer->last_y;
   pointer->last_x = pointer->cursor->x;
   pointer->last_y = pointer->cursor->y;

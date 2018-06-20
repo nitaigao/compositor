@@ -31,23 +31,12 @@
 #include "wm_seat.h"
 #include "wm_pointer.h"
 
-static void handle_new_subsurface(struct wl_listener *listener, void *data) {
-  printf("handle_new_subsurface\n");
-  struct wm_surface *surface = wl_container_of(listener, surface, new_subsurface);
-  struct wlr_subsurface *wlr_subsurface = data;
-}
-
-static void handle_commit(struct wl_listener *listener, void *data) {
-  printf("handle_commit\n");
-}
-
 void handle_map(struct wl_listener *listener, void *data) {
-  printf("handle_map\n");
   struct wm_surface *surface = wl_container_of(listener, surface, map);
 
-  // if (surface->type == WM_SURFACE_TYPE_X11) {
-  //   surface->surface = surface->xwayland_surface->surface;
-  // } elsewlr_output_damage_add_box
+  if (surface->type == WM_SURFACE_TYPE_X11) {
+    surface->surface = surface->xwayland_surface->surface;
+  }
 
   if (surface->type == WM_SURFACE_TYPE_XDG) {
     surface->surface = surface->xdg_surface->surface;
@@ -65,13 +54,7 @@ void handle_map(struct wl_listener *listener, void *data) {
   surface->window = window;
 
   wl_list_insert(&surface->server->windows, &window->link);
-
-  surface->new_subsurface.notify = handle_new_subsurface;
-  wl_signal_add(&surface->surface->events.new_subsurface, &surface->new_subsurface);
-
-  surface->commit.notify = handle_commit;
-  wl_signal_add(&surface->surface->events.commit, &surface->commit);
-
+  
   struct wm_seat *seat = wm_seat_find_or_create(window->surface->server, WM_DEFAULT_SEAT);
 
   wlr_seat_keyboard_notify_enter(
@@ -84,7 +67,6 @@ void handle_map(struct wl_listener *listener, void *data) {
 }
 
 void handle_unmap(struct wl_listener *listener, void *data) {
-  printf("handle_unmap\n");
   struct wm_surface *wm_surface = wl_container_of(listener, wm_surface, unmap);
 
   wl_list_remove(&wm_surface->window->link);
@@ -113,19 +95,13 @@ void handle_unmap(struct wl_listener *listener, void *data) {
 }
 
 void handle_move(struct wl_listener *listener, void *data) {
-  printf("handle move\n");
   struct wm_surface *surface = wl_container_of(listener, surface, move);
   struct wlr_wl_shell_surface_move_event *event = data;
   struct wm_seat *seat = wm_seat_find_or_create(surface->server, event->seat->seat->name);
   seat->pointer->mode = WM_POINTER_MODE_MOVE;
 }
 
-static void handle_new_popup(struct wl_listener *listener, void *data) {
-  printf("handle_new_popup\n");
-	// struct wm_surface *surface = wl_container_of(listener, wm_surface, new_popup);
-	// struct wlr_xdg_popup_v6 *wlr_popup = data;
-	// popup_create(roots_xdg_surface->view, wlr_popup);
-}
+static void handle_new_popup(struct wl_listener *listener, void *data) { }
 
 struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));

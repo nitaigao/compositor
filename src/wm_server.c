@@ -127,20 +127,17 @@ void wm_server_run(struct wm_server* server) {
 }
 
 static void new_input_notify(struct wl_listener *listener, void *data) {
-  printf("New Input Connected\n");
   struct wlr_input_device *device = data;
   struct wm_server *server = wl_container_of(listener, server, new_input);
   wm_server_connect_input(server, device);
 }
 
 static void new_output_notify(struct wl_listener *listener, void *data) {
-  printf("New Output Connected\n");
   struct wm_server *server = wl_container_of(listener, server, new_output);
   wm_server_connect_output(server, data);
 }
 
 void handle_xdg_shell_surface(struct wl_listener *listener, void *data) {
-  printf("handle_xdg_shell_surface\n");
   struct wlr_xdg_surface *xdg_surface = data;
   struct wm_server *server = wl_container_of(listener, server, xdg_shell_surface);
 
@@ -171,21 +168,21 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
 }
 
 void handle_xwayland_surface(struct wl_listener *listener, void *data) {
-//   struct wlr_xwayland_surface *xwayland_surface = data;
-//   struct wm_server *server = wl_container_of(listener, server, xwayland_surface);
+  // struct wlr_xwayland_surface *xwayland_surface = data;
+  // struct wm_server *server = wl_container_of(listener, server, xwayland_surface);
 
-//   printf("New XWayland Surface\n");
+  // printf("New XWayland Surface\n");
 
-//   wlr_xwayland_surface_ping(xwayland_surface);
+  // wlr_xwayland_surface_ping(xwayland_surface);
 
-//   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
-//   wm_surface->server = server;
-//   wm_surface->xwayland_surface = xwayland_surface;
-//   wm_surface->type = WM_SURFACE_TYPE_X11;
-//   wm_surface->scale = 1.0;
+  // struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
+  // wm_surface->server = server;
+  // wm_surface->xwayland_surface = xwayland_surface;
+  // wm_surface->type = WM_SURFACE_TYPE_X11;
+  // wm_surface->scale = 1.0;
 
-//   wm_surface->map.notify = handle_map;
-//   wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
+  // wm_surface->map.notify = handle_map;
+  // wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
 }
 
 struct wm_server* wm_server_create() {
