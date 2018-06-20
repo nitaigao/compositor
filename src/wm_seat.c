@@ -18,9 +18,9 @@
 #include "wm_window.h"
 #include "wm_surface.h"
 #include "wm_keyboard.h"
+#include "wm_output.h"
 
 void seat_destroy_notify(struct wl_listener *listener, void *data) {
-  printf("seat_destroy_notify\n");
   struct wm_seat *seat = wl_container_of(listener, seat, destroy);
   wm_seat_destroy(seat);
 }
@@ -79,7 +79,6 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
       struct wlr_surface *surface = wlr_xdg_surface_surface_at(window->surface->xdg_surface, local_x, local_y, &sx, &sy);
 
       if (surface) {
-        printf("xdg %p %f %f %f %f\n", surface, sx, sy, local_x, local_y);
         wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
       } else {
@@ -93,11 +92,8 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
       struct wlr_surface *surface = wlr_xdg_surface_v6_surface_at(window->surface->xdg_surface_v6, local_x, local_y, &sx, &sy);
 
       if (surface) {
-        printf("xdg v6 %p %f %f %f %f\n", surface, sx, sy, local_x, local_y);
         wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
-      } else {
-        wlr_seat_pointer_clear_focus(pointer->seat->seat);
       }
     }
   }
@@ -159,6 +155,11 @@ void wm_seat_create_pointer(struct wm_seat* seat) {
 void wm_seat_attach_pointing_device(struct wm_seat* seat, struct wlr_input_device* device) {
   if (seat->pointer == NULL) {
     wm_seat_create_pointer(seat);
+  }
+
+  struct wm_output *output;
+  wl_list_for_each(output, &seat->server->outputs, link) {
+    wlr_cursor_map_to_output(seat->pointer->cursor, output->wlr_output);
   }
 
   wlr_cursor_attach_input_device(seat->pointer->cursor, device);

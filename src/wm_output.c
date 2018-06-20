@@ -29,7 +29,6 @@ static void output_frame_notify(struct wl_listener *listener, void *data) {
 }
 
 static void output_destroy_notify(struct wl_listener *listener, void *data) {
-  printf("output_destroy_notify\n");
   struct wm_output *output = wl_container_of(listener, output, destroy);
 
   wl_list_remove(&output->link);
@@ -70,8 +69,15 @@ struct render_data {
 
 static void render_surface(struct wlr_surface *surface, int sx, int sy, void *data) {
   if (!wlr_surface_has_buffer(surface)) {
+    printf("surface had no buffer\n");
 		return;
 	}
+
+  struct wlr_texture *texture = wlr_surface_get_texture(surface);
+  if (texture == NULL) {
+    printf("texture was null\n");
+    return;
+  }
 
   struct render_data *render_data = data;
   struct wm_window* window = render_data->window;
@@ -90,7 +96,7 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
 	wlr_matrix_project_box(matrix, &box, transform, 0, output->wlr_output->transform_matrix);
 
   struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
-  wlr_render_texture_with_matrix(renderer, surface->texture, matrix, 1.0f);
+  wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0f);
 }
 
 void wm_output_render(struct wm_output* output) {

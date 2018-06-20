@@ -14,7 +14,6 @@ struct wm_surface {
   struct wm_server *server;
   struct wm_window *window;
 
-
   struct wlr_xdg_surface_v6 *xdg_surface_v6;
   struct wlr_xdg_surface *xdg_surface;
   struct wlr_xwayland_surface *xwayland_surface;

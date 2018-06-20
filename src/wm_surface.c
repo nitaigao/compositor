@@ -31,6 +31,16 @@
 #include "wm_seat.h"
 #include "wm_pointer.h"
 
+static void handle_new_subsurface(struct wl_listener *listener, void *data) {
+  printf("handle_new_subsurface\n");
+  struct wm_surface *surface = wl_container_of(listener, surface, new_subsurface);
+  struct wlr_subsurface *wlr_subsurface = data;
+}
+
+static void handle_commit(struct wl_listener *listener, void *data) {
+  printf("handle_commit\n");
+}
+
 void handle_map(struct wl_listener *listener, void *data) {
   printf("handle_map\n");
   struct wm_surface *surface = wl_container_of(listener, surface, map);
@@ -55,6 +65,12 @@ void handle_map(struct wl_listener *listener, void *data) {
   surface->window = window;
 
   wl_list_insert(&surface->server->windows, &window->link);
+
+  surface->new_subsurface.notify = handle_new_subsurface;
+  wl_signal_add(&surface->surface->events.new_subsurface, &surface->new_subsurface);
+
+  surface->commit.notify = handle_commit;
+  wl_signal_add(&surface->surface->events.commit, &surface->commit);
 
   struct wm_seat *seat = wm_seat_find_or_create(window->surface->server, WM_DEFAULT_SEAT);
 
@@ -118,7 +134,9 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->type = WM_SURFACE_TYPE_XDG_V6;
   wm_surface->scale = 2.0;
 
-  wlr_xdg_toplevel_v6_set_activated(xdg_surface_v6, true);
+  if (xdg_surface_v6->role == WLR_XDG_SURFACE_V6_ROLE_TOPLEVEL) {
+    wlr_xdg_toplevel_v6_set_activated(xdg_surface_v6, true);
+  }
 
   wm_surface->map.notify = handle_map;
   wl_signal_add(&xdg_surface_v6->events.map, &wm_surface->map);
@@ -142,7 +160,11 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, st
   wm_surface->type = WM_SURFACE_TYPE_XDG;
   wm_surface->scale = 2.0;
 
-  wlr_xdg_toplevel_set_activated(xdg_surface, true);
+  printf("################################################################################### Role: %d\n", xdg_surface->role);
+
+  if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+    wlr_xdg_toplevel_set_activated(xdg_surface, true);
+  }
 
   wm_surface->map.notify = handle_map;
   wl_signal_add(&xdg_surface->events.map, &wm_surface->map);

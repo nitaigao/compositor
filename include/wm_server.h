@@ -23,6 +23,8 @@ struct wm_server {
   struct wlr_xdg_output_manager* xdg_output_manager;
   struct wlr_data_device_manager *data_device_manager;
   struct wlr_primary_selection_device_manager *primary_selection_device_manager;
+  struct wlr_server_decoration_manager *server_decoration_manager;
+  struct wlr_linux_dmabuf *linux_dmabuf;
 
   struct wl_listener xwayland_surface;
   struct wl_listener xdg_shell_v6_surface;

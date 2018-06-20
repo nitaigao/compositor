@@ -23,6 +23,8 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_output_layout.h>
+#include <wlr/types/wlr_server_decoration.h>
+#include <wlr/types/wlr_linux_dmabuf.h>
 #include <wlr/util/log.h>
 
 #include "wm_pointer.h"
@@ -64,7 +66,7 @@ void wm_server_destroy(struct wm_server* server) {
 }
 
 void wm_server_set_cursors(struct wm_server* server) {
-  wlr_xcursor_manager_load(server->xcursor_manager, 1);
+  // wlr_xcursor_manager_load(server->xcursor_manager, 1);
   wlr_xcursor_manager_load(server->xcursor_manager, 2);
 
   // struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(server->xcursor_manager, "left_ptr", 1);
@@ -199,6 +201,8 @@ struct wm_server* wm_server_create() {
     fprintf(stderr, "Failed to create display\n");
   }
 
+  wl_display_get_event_loop(server->wl_display);
+
   fprintf(stdout, "Created display\n");
 
   server->backend = wlr_backend_autocreate(server->wl_display, NULL);
@@ -208,6 +212,26 @@ struct wm_server* wm_server_create() {
   }
 
   fprintf(stdout, "Created backend\n");
+  
+  server->data_device_manager = wlr_data_device_manager_create(server->wl_display);
+  server->renderer = wlr_backend_get_renderer(server->backend);
+  wlr_renderer_init_wl_display(server->renderer, server->wl_display);
+
+  server->layout = wlr_output_layout_create();
+  server->xdg_output_manager = wlr_xdg_output_manager_create(server->wl_display, server->layout);
+  server->compositor = wlr_compositor_create(server->wl_display, server->renderer);
+
+  server->xdg_shell = wlr_xdg_shell_create(server->wl_display);
+  wl_signal_add(&server->xdg_shell->events.new_surface, &server->xdg_shell_surface);
+  server->xdg_shell_surface.notify = handle_xdg_shell_surface;
+  
+  // server->xdg_shell_v6 = wlr_xdg_shell_v6_create(server->wl_display);
+  // wl_signal_add(&server->xdg_shell_v6->events.new_surface, &server->xdg_shell_v6_surface);
+  // server->xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
+
+  // server->xwayland = wlr_xwayland_create(server->wl_display, server->compositor, true);
+  // wl_signal_add(&server->xwayland->events.new_surface, &server->xwayland_surface);
+  // server->xwayland_surface.notify = handle_xwayland_surface;
 
   server->xcursor_manager = wlr_xcursor_manager_create("default", 24);
 
@@ -216,11 +240,12 @@ struct wm_server* wm_server_create() {
     return NULL;
   }
 
-  wl_signal_add(&server->backend->events.new_input, &server->new_input);
-  server->new_input.notify = new_input_notify;
+  server->server_decoration_manager = wlr_server_decoration_manager_create(server->wl_display);
+  wlr_server_decoration_manager_set_default_mode(server->server_decoration_manager, WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
 
-  server->new_output.notify = new_output_notify;
-  wl_signal_add(&server->backend->events.new_output, &server->new_output);
+  server->primary_selection_device_manager = wlr_primary_selection_device_manager_create(server->wl_display);
+
+  server->linux_dmabuf = wlr_linux_dmabuf_create(server->wl_display, server->renderer);
 
   server->socket = wl_display_add_socket_auto(server->wl_display);
 
@@ -228,28 +253,14 @@ struct wm_server* wm_server_create() {
     fprintf(stderr, "Failed to get socket\n");
   }
 
-  server->renderer = wlr_backend_get_renderer(server->backend);
-  server->compositor = wlr_compositor_create(server->wl_display, server->renderer);
+  setenv("_WAYLAND_DISPLAY", server->socket, true);
+  setenv("WAYLAND_DISPLAY", server->socket, true);
 
-  wlr_renderer_init_wl_display(server->renderer, server->wl_display);
-  server->primary_selection_device_manager = wlr_primary_selection_device_manager_create(server->wl_display);
+  wl_signal_add(&server->backend->events.new_input, &server->new_input);
+  server->new_input.notify = new_input_notify;
 
-  server->layout = wlr_output_layout_create();
-  server->xdg_output_manager = wlr_xdg_output_manager_create(server->wl_display, server->layout);
-
-  server->xdg_shell_v6 = wlr_xdg_shell_v6_create(server->wl_display);
-  wl_signal_add(&server->xdg_shell_v6->events.new_surface, &server->xdg_shell_v6_surface);
-  server->xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
-
-  server->xdg_shell = wlr_xdg_shell_create(server->wl_display);
-  wl_signal_add(&server->xdg_shell->events.new_surface, &server->xdg_shell_surface);
-  server->xdg_shell_surface.notify = handle_xdg_shell_surface;
-
-  server->data_device_manager = wlr_data_device_manager_create(server->wl_display);
-
-  // server->xwayland = wlr_xwayland_create(server->wl_display, server->compositor, true);
-  // wl_signal_add(&server->xwayland->events.new_surface, &server->xwayland_surface);
-  // server->xwayland_surface.notify = handle_xwayland_surface;
+  server->new_output.notify = new_output_notify;
+  wl_signal_add(&server->backend->events.new_output, &server->new_output);
 
   wm_server_set_cursors(server);
 
