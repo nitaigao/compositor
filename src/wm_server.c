@@ -60,7 +60,7 @@ void wm_server_destroy(struct wm_server* server) {
   server->backend = NULL;
 
   wl_display_destroy(server->wl_display);
-  server->wl_display = NULL; 
+  server->wl_display = NULL;
 
   free(server);
 }
@@ -150,7 +150,6 @@ void handle_xdg_shell_surface(struct wl_listener *listener, void *data) {
 
   printf("New XDG Surface: Title=%s\n", xdg_surface->toplevel->title);
   wlr_xdg_surface_ping(xdg_surface);
-
   wm_surface_xdg_create(xdg_surface, server);
 }
 
@@ -165,7 +164,6 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
 
   printf("New XDG V6 Surface: Title=%s\n", xdg_surface->toplevel->title);
   wlr_xdg_surface_v6_ping(xdg_surface);
-
   wm_surface_xdg_v6_create(xdg_surface, server);
 }
 
@@ -181,7 +179,6 @@ void handle_xwayland_surface(struct wl_listener *listener, void *data) {
   // wm_surface->server = server;
   // wm_surface->xwayland_surface = xwayland_surface;
   // wm_surface->type = WM_SURFACE_TYPE_X11;
-  // wm_surface->scale = 1.0;
 
   // wm_surface->map.notify = handle_map;
   // wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
@@ -211,7 +208,7 @@ struct wm_server* wm_server_create() {
   }
 
   fprintf(stdout, "Created backend\n");
-  
+
   server->data_device_manager = wlr_data_device_manager_create(server->wl_display);
   server->renderer = wlr_backend_get_renderer(server->backend);
   wlr_renderer_init_wl_display(server->renderer, server->wl_display);
@@ -223,10 +220,10 @@ struct wm_server* wm_server_create() {
   server->xdg_shell = wlr_xdg_shell_create(server->wl_display);
   wl_signal_add(&server->xdg_shell->events.new_surface, &server->xdg_shell_surface);
   server->xdg_shell_surface.notify = handle_xdg_shell_surface;
-  
-  // server->xdg_shell_v6 = wlr_xdg_shell_v6_create(server->wl_display);
-  // wl_signal_add(&server->xdg_shell_v6->events.new_surface, &server->xdg_shell_v6_surface);
-  // server->xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
+
+  server->xdg_shell_v6 = wlr_xdg_shell_v6_create(server->wl_display);
+  wl_signal_add(&server->xdg_shell_v6->events.new_surface, &server->xdg_shell_v6_surface);
+  server->xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
 
   // server->xwayland = wlr_xwayland_create(server->wl_display, server->compositor, true);
   // wl_signal_add(&server->xwayland->events.new_surface, &server->xwayland_surface);

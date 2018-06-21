@@ -74,9 +74,6 @@ struct wm_output* wm_output_create(struct wlr_output* wlr_output, struct wlr_out
   output->frame.notify = output_frame_notify;
   wl_signal_add(&wlr_output->events.frame, &output->frame);
 
-  // wlr_output_set_scale(wlr_output, output->scale);
-  // wlr_output_create_global(wlr_output);
-
   return output;
 }
 
@@ -147,9 +144,9 @@ void wm_output_render(struct wm_output* output) {
     if (window->surface->type == WM_SURFACE_TYPE_XDG) {
       wlr_xdg_surface_for_each_surface(window->surface->xdg_surface, render_surface, &render_data);
     }
-    // if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
-    //   wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6, render_surface, &render_data);
-    // }
+    if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
+      wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6, render_surface, &render_data);
+    }
   }
 
   wl_list_for_each_reverse(window, &server->windows, link) {
