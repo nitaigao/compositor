@@ -98,6 +98,13 @@ static void handle_cursor_motion_absolute(struct wl_listener *listener, void *da
   handle_motion(pointer, event->time_msec);
 }
 
+static void handle_axis(struct wl_listener *listener, void *data) {
+  struct wm_pointer *pointer = wl_container_of(listener, pointer, axis);
+	struct wlr_event_pointer_axis *event = data;
+  wlr_seat_pointer_notify_axis(pointer->seat->seat, event->time_msec,
+    event->orientation, event->delta, event->delta_discrete, event->source);
+}
+
 void wm_seat_destroy(struct wm_seat* seat) {
   struct wm_keyboard *keyboard, *tmp;
   wl_list_for_each_safe(keyboard, tmp, &seat->keyboards, link) {
@@ -129,6 +136,9 @@ void wm_seat_create_pointer(struct wm_seat* seat) {
 
   wl_signal_add(&seat->pointer->cursor->events.motion_absolute, &seat->pointer->cursor_motion_absolute);
   seat->pointer->cursor_motion_absolute.notify = handle_cursor_motion_absolute;
+
+  wl_signal_add(&seat->pointer->cursor->events.axis, &seat->pointer->axis);
+  seat->pointer->axis.notify = handle_axis;
 
   wl_signal_add(&seat->pointer->cursor->events.motion, &seat->pointer->cursor_motion);
   seat->pointer->cursor_motion.notify = handle_cursor_motion;

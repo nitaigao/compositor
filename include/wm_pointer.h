@@ -14,6 +14,7 @@ struct wm_pointer {
 
   struct wlr_cursor *cursor;
 
+  struct wl_listener axis;
   struct wl_listener cursor_motion_absolute;
   struct wl_listener cursor_motion;
   struct wl_listener button;
