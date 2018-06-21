@@ -60,14 +60,14 @@ void wm_server_destroy(struct wm_server* server) {
   server->backend = NULL;
 
   wl_display_destroy(server->wl_display);
-  server->wl_display = NULL;
+  server->wl_display = NULL; 
 
   free(server);
 }
 
 void wm_server_set_cursors(struct wm_server* server) {
-  // wlr_xcursor_manager_load(server->xcursor_manager, 1);
-  wlr_xcursor_manager_load(server->xcursor_manager, 2);
+  wlr_xcursor_manager_load(server->xcursor_manager, 1);
+  // wlr_xcursor_manager_load(server->xcursor_manager, 2);
 
   // struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(server->xcursor_manager, "left_ptr", 1);
   // if (xcursor != NULL) {
@@ -109,6 +109,8 @@ void wm_server_connect_input(struct wm_server* server, struct wlr_input_device* 
     seat->seat->capabilities |= WL_SEAT_CAPABILITY_POINTER;
   }
 
+  printf("%d\n", seat->seat->capabilities);
+
   wlr_seat_set_capabilities(seat->seat, seat->seat->capabilities);
 }
 
@@ -119,9 +121,9 @@ void wm_server_run(struct wm_server* server) {
   }
 
   printf("Backend started\n");
+  setenv("WAYLAND_DISPLAY", server->socket, true);
   printf("Running compositor on wayland display '%s'\n", server->socket);
 
-  setenv("WAYLAND DISPLAY", server->socket, true);
 
   wl_display_run(server->wl_display);
 }
@@ -251,7 +253,6 @@ struct wm_server* wm_server_create() {
   }
 
   setenv("_WAYLAND_DISPLAY", server->socket, true);
-  setenv("WAYLAND_DISPLAY", server->socket, true);
 
   wl_signal_add(&server->backend->events.new_input, &server->new_input);
   server->new_input.notify = new_input_notify;

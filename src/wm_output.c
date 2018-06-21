@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+#include <string.h>
+
 #include <wlr/backend.h>
 #include <wayland-server.h>
 #include <wlr/types/wlr_surface.h>
@@ -13,6 +15,7 @@
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_xdg_shell_v6.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/types/wlr_xcursor_manager.h>
 
 #include "wm_server.h"
 #include "wm_window.h"
@@ -49,15 +52,30 @@ struct wm_output* wm_output_create(struct wlr_output* wlr_output, struct wlr_out
   output->server = server;
   output->wlr_output = wlr_output;
 
+  wlr_output_layout_add_auto(layout, wlr_output);
+
+  if (strcmp(wlr_output->name, "eDP-1") == 0) {
+    wlr_output_set_scale(wlr_output, 2.0);
+  }
+
+  if (strcmp(wlr_output->name, "DP-1") == 0) {
+    wlr_output_set_scale(wlr_output, 2.0);
+  }
+
+  if (strcmp(wlr_output->name, "X11-1") == 0) {
+    wlr_output_set_scale(wlr_output, 2.0);
+  }
+
+  wlr_xcursor_manager_load(server->xcursor_manager, wlr_output->scale);
+
   output->destroy.notify = output_destroy_notify;
   wl_signal_add(&wlr_output->events.destroy, &output->destroy);
 
   output->frame.notify = output_frame_notify;
   wl_signal_add(&wlr_output->events.frame, &output->frame);
 
-  wlr_output_set_scale(wlr_output, 2);
-  wlr_output_layout_add_auto(layout, wlr_output);
-  wlr_output_create_global(wlr_output);
+  // wlr_output_set_scale(wlr_output, output->scale);
+  // wlr_output_create_global(wlr_output);
 
   return output;
 }
@@ -69,13 +87,11 @@ struct render_data {
 
 static void render_surface(struct wlr_surface *surface, int sx, int sy, void *data) {
   if (!wlr_surface_has_buffer(surface)) {
-    printf("surface had no buffer\n");
 		return;
 	}
 
   struct wlr_texture *texture = wlr_surface_get_texture(surface);
   if (texture == NULL) {
-    printf("texture was null\n");
     return;
   }
 
@@ -83,11 +99,13 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
   struct wm_window* window = render_data->window;
   struct wm_output* output = render_data->output;
 
+  double scale = output->wlr_output->scale;
+
   struct wlr_box box = {
-    .x = (window->x + sx) * output->wlr_output->scale,
-    .y = (window->y + sy) * output->wlr_output->scale,
-    .width = surface->current->width * window->surface->scale,
-    .height = surface->current->height * window->surface->scale
+    .x = (window->x + sx) * scale,
+    .y = (window->y + sy) * scale,
+    .width = surface->current->width * scale,
+    .height = surface->current->height * scale
   };
 
   float matrix[16];
@@ -97,6 +115,11 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
 
   struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
   wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0f);
+}
+
+void send_frame_done(struct wlr_surface *surface, int sx, int sy, void *data) {
+  struct timespec* now = data;
+  wlr_surface_send_frame_done(surface, now);
 }
 
 void wm_output_render(struct wm_output* output) {
@@ -124,14 +147,13 @@ void wm_output_render(struct wm_output* output) {
     if (window->surface->type == WM_SURFACE_TYPE_XDG) {
       wlr_xdg_surface_for_each_surface(window->surface->xdg_surface, render_surface, &render_data);
     }
-
-    if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
-      wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6, render_surface, &render_data);
-    }
+    // if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
+    //   wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6, render_surface, &render_data);
+    // }
   }
 
   wl_list_for_each_reverse(window, &server->windows, link) {
-    wlr_surface_send_frame_done(window->surface->surface, &now);
+    wlr_surface_for_each_surface(window->surface->surface, send_frame_done, &now);
   }
 
   wlr_output_swap_buffers(wlr_output, NULL, NULL);

@@ -54,7 +54,7 @@ void handle_map(struct wl_listener *listener, void *data) {
   surface->window = window;
 
   wl_list_insert(&surface->server->windows, &window->link);
-  
+
   struct wm_seat *seat = wm_seat_find_or_create(window->surface->server, WM_DEFAULT_SEAT);
 
   wlr_seat_keyboard_notify_enter(
@@ -62,8 +62,6 @@ void handle_map(struct wl_listener *listener, void *data) {
     surface->surface,
     NULL, 0, NULL
   );
-
-  wm_window_focus(window);
 }
 
 void handle_unmap(struct wl_listener *listener, void *data) {
@@ -108,7 +106,6 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->server = server;
   wm_surface->xdg_surface_v6 = xdg_surface_v6;
   wm_surface->type = WM_SURFACE_TYPE_XDG_V6;
-  wm_surface->scale = 2.0;
 
   if (xdg_surface_v6->role == WLR_XDG_SURFACE_V6_ROLE_TOPLEVEL) {
     wlr_xdg_toplevel_v6_set_activated(xdg_surface_v6, true);
@@ -134,7 +131,6 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, st
   wm_surface->server = server;
   wm_surface->xdg_surface = xdg_surface;
   wm_surface->type = WM_SURFACE_TYPE_XDG;
-  wm_surface->scale = 2.0;
 
   if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
     wlr_xdg_toplevel_set_activated(xdg_surface, true);

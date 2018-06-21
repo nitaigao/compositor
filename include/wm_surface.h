@@ -9,7 +9,6 @@
 
 struct wm_surface {
   int type;
-  double scale;
 
   struct wm_server *server;
   struct wm_window *window;

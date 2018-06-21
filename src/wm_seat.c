@@ -11,7 +11,6 @@
 #include <wlr/types/wlr_xdg_shell_v6.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
-
 #include "wm_server.h"
 #include "wm_pointer.h"
 #include "wm_seat.h"
@@ -70,18 +69,18 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
       }
     }
 
-    double local_x = (pointer->cursor->x - window->x) * (2.0 / window->surface->scale);
-    double local_y = (pointer->cursor->y - window->y) * (2.0 / window->surface->scale);
+    double local_x = pointer->cursor->x - window->x;
+    double local_y = pointer->cursor->y - window->y;
 
     if (window->surface->type == WM_SURFACE_TYPE_XDG) {
       double sx, sy;
-
-      struct wlr_surface *surface = wlr_xdg_surface_surface_at(window->surface->xdg_surface, local_x, local_y, &sx, &sy);
+      struct wlr_surface *surface = wlr_surface_surface_at(window->surface->surface, local_x, local_y, &sx, &sy);
 
       if (surface) {
         wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
         wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
       } else {
+        printf("Clear focus\n");
         wlr_seat_pointer_clear_focus(pointer->seat->seat);
       }
     }

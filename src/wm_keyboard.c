@@ -17,7 +17,6 @@ void wm_keyboard_destroy(struct wm_keyboard* keyboard) {
 }
 
 void exec_command(const char* shell_cmd) {
-  printf("Execute %s\n", shell_cmd);
   pid_t pid = fork();
   if (pid < 0) {
     wlr_log(L_ERROR, "cannot execute binding command: fork() failed");
