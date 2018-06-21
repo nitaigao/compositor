@@ -3,6 +3,7 @@ project('compositor', 'c', default_options : ['c_std=gnu11'])
 wlroots = dependency('wlroots')
 wayland = dependency('wayland-server')
 xkbcommon = dependency('xkbcommon')
+wayland_protocols = dependency('wayland-protocols', version: '>=1.14')
 
 include_directories = include_directories('include', '/usr/include/pixman-1')
 
@@ -15,5 +16,5 @@ executable('compositor',
   'src/wm_surface.c',
    'src/wm_window.c',
   include_directories: include_directories,
-  dependencies: [wlroots, wayland, xkbcommon]
+  dependencies: [wlroots, wayland, xkbcommon, wayland_protocols]
 )
