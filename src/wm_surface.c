@@ -99,9 +99,7 @@ void handle_move(struct wl_listener *listener, void *data) {
   seat->pointer->mode = WM_POINTER_MODE_MOVE;
 }
 
-static void handle_new_popup(struct wl_listener *listener, void *data) { }
-
-struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server) {
+void wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
   wm_surface->xdg_surface_v6 = xdg_surface_v6;
@@ -119,14 +117,9 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
 
   wm_surface->move.notify = handle_move;
   wl_signal_add(&xdg_surface_v6->toplevel->events.request_move, &wm_surface->move);
-
-  wm_surface->new_popup.notify = handle_new_popup;
-	wl_signal_add(&xdg_surface_v6->events.new_popup, &wm_surface->new_popup);
-
-  return wm_surface;
 }
 
-struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, struct wm_server* server) {
+void wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, struct wm_server* server) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
   wm_surface->xdg_surface = xdg_surface;
@@ -144,6 +137,20 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, st
 
   wm_surface->move.notify = handle_move;
   wl_signal_add(&xdg_surface->toplevel->events.request_move, &wm_surface->move);
+}
 
-  return wm_surface;
+void wm_surface_xwayland_create(struct wlr_xwayland_surface* xwayland_surface, struct wm_server* server) {
+  struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
+  wm_surface->server = server;
+  wm_surface->xwayland_surface = xwayland_surface;
+  wm_surface->type = WM_SURFACE_TYPE_X11;
+
+  wm_surface->unmap.notify = handle_unmap;
+  wl_signal_add(&xwayland_surface->events.unmap, &wm_surface->unmap);
+
+  wm_surface->map.notify = handle_map;
+  wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
+
+  wm_surface->move.notify = handle_move;
+  wl_signal_add(&xwayland_surface->events.request_move, &wm_surface->move);
 }

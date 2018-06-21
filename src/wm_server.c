@@ -168,20 +168,12 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
 }
 
 void handle_xwayland_surface(struct wl_listener *listener, void *data) {
-  // struct wlr_xwayland_surface *xwayland_surface = data;
-  // struct wm_server *server = wl_container_of(listener, server, xwayland_surface);
+  struct wlr_xwayland_surface *xwayland_surface = data;
+  struct wm_server *server = wl_container_of(listener, server, xwayland_surface);
 
-  // printf("New XWayland Surface\n");
-
-  // wlr_xwayland_surface_ping(xwayland_surface);
-
-  // struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
-  // wm_surface->server = server;
-  // wm_surface->xwayland_surface = xwayland_surface;
-  // wm_surface->type = WM_SURFACE_TYPE_X11;
-
-  // wm_surface->map.notify = handle_map;
-  // wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
+  printf("New XWayland Surface\n");
+  wlr_xwayland_surface_ping(xwayland_surface);
+  wm_surface_xwayland_create(xwayland_surface, server);
 }
 
 struct wm_server* wm_server_create() {
@@ -225,9 +217,9 @@ struct wm_server* wm_server_create() {
   wl_signal_add(&server->xdg_shell_v6->events.new_surface, &server->xdg_shell_v6_surface);
   server->xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
 
-  // server->xwayland = wlr_xwayland_create(server->wl_display, server->compositor, true);
-  // wl_signal_add(&server->xwayland->events.new_surface, &server->xwayland_surface);
-  // server->xwayland_surface.notify = handle_xwayland_surface;
+  server->xwayland = wlr_xwayland_create(server->wl_display, server->compositor, true);
+  wl_signal_add(&server->xwayland->events.new_surface, &server->xwayland_surface);
+  server->xwayland_surface.notify = handle_xwayland_surface;
 
   server->xcursor_manager = wlr_xcursor_manager_create("default", 24);
 

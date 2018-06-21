@@ -80,6 +80,7 @@ struct wm_output* wm_output_create(struct wlr_output* wlr_output, struct wlr_out
 struct render_data {
   struct wm_output *output;
   struct wm_window* window;
+  int surface_type;
 };
 
 static void render_surface(struct wlr_surface *surface, int sx, int sy, void *data) {
@@ -97,6 +98,10 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
   struct wm_output* output = render_data->output;
 
   double scale = output->wlr_output->scale;
+
+  if (window->surface->type == WM_SURFACE_TYPE_X11) {
+    scale = 1;
+  }
 
   struct wlr_box box = {
     .x = (window->x + sx) * scale,
@@ -146,6 +151,9 @@ void wm_output_render(struct wm_output* output) {
     }
     if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
       wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6, render_surface, &render_data);
+    }
+    if (window->surface->type == WM_SURFACE_TYPE_X11) {
+      render_surface(window->surface->surface, window->x, window->y, &render_data);
     }
   }
 
