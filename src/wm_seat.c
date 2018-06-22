@@ -105,6 +105,12 @@ static void handle_axis(struct wl_listener *listener, void *data) {
     event->orientation, event->delta, event->delta_discrete, event->source);
 }
 
+static void handle_request_set_cursor(struct wl_listener *listener, void *data) {
+  struct wm_pointer *pointer = wl_container_of(listener, pointer, request_set_cursor);
+  struct wlr_seat_pointer_request_set_cursor_event *event = data;
+  wlr_cursor_set_surface(pointer->cursor, event->surface, event->hotspot_x, event->hotspot_y);
+}
+
 void wm_seat_destroy(struct wm_seat* seat) {
   struct wm_keyboard *keyboard, *tmp;
   wl_list_for_each_safe(keyboard, tmp, &seat->keyboards, link) {
@@ -145,6 +151,9 @@ void wm_seat_create_pointer(struct wm_seat* seat) {
 
   wl_signal_add(&seat->pointer->cursor->events.button, &seat->pointer->button);
   seat->pointer->button.notify = handle_cursor_button;
+
+  wl_signal_add(&seat->seat->events.request_set_cursor, &seat->pointer->request_set_cursor);
+	seat->pointer->request_set_cursor.notify = handle_request_set_cursor;
 }
 
 void wm_seat_attach_pointing_device(struct wm_seat* seat, struct wlr_input_device* device) {
