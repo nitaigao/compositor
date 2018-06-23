@@ -167,6 +167,8 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
 }
 
 void handle_xwayland_surface(struct wl_listener *listener, void *data) {
+  (void)listener;
+  (void)data;
   // struct wlr_xwayland_surface *xwayland_surface = data;
   // struct wm_server *server = wl_container_of(listener, server, xwayland_surface);
 

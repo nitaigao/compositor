@@ -34,6 +34,8 @@
 #include "wm_pointer.h"
 
 void handle_map(struct wl_listener *listener, void *data) {
+  (void)data;
+
   struct wm_surface *surface = wl_container_of(listener, surface, map);
 
   if (surface->type == WM_SURFACE_TYPE_X11) {
@@ -69,6 +71,8 @@ void handle_map(struct wl_listener *listener, void *data) {
 }
 
 void handle_unmap(struct wl_listener *listener, void *data) {
+  (void)data;
+
   struct wm_surface *wm_surface = wl_container_of(listener, wm_surface, unmap);
 
   wl_list_remove(&wm_surface->window->link);

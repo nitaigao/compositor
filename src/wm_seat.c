@@ -22,11 +22,13 @@
 #include "wm_output.h"
 
 void seat_destroy_notify(struct wl_listener *listener, void *data) {
+  (void)data;
   struct wm_seat *seat = wl_container_of(listener, seat, destroy);
   wm_seat_destroy(seat);
 }
 
 void keyboard_modifiers_notify(struct wl_listener *listener, void *data) {
+  (void)data;
   struct wm_keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
   wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat, &keyboard->device->keyboard->modifiers);
 }

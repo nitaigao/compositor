@@ -29,11 +29,13 @@ void wm_output_destroy(struct wm_output* output) {
 }
 
 static void output_frame_notify(struct wl_listener *listener, void *data) {
+  (void)data;
   struct wm_output *output = wl_container_of(listener, output, frame);
   wm_output_render(output);
 }
 
 static void output_destroy_notify(struct wl_listener *listener, void *data) {
+  (void)data;
   struct wm_output *output = wl_container_of(listener, output, destroy);
 
   wl_list_remove(&output->link);
@@ -126,6 +128,8 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
 }
 
 void send_frame_done(struct wlr_surface *surface, int sx, int sy, void *data) {
+  (void)sx;
+  (void)sy;
   struct timespec* now = data;
   wlr_surface_send_frame_done(surface, now);
 }

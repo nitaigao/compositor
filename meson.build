@@ -1,4 +1,8 @@
-project('compositor', 'c', default_options : ['c_std=gnu11', '-D_POSIX_MONOTONIC_CLOCK', '-D_POSIX_C_SOURCE=200809L'])
+project('compositor', 'c', default_options : [
+  'warning_level=3',
+	'werror=true',
+  'c_std=gnu11'
+])
 
 wlroots = dependency('wlroots')
 wayland = dependency('wayland-server')
