@@ -9,14 +9,20 @@
 
 struct wm_pointer {
   int mode;
+  int resize_edge;
 
-  double delta_x;
-  double delta_y;
-  double last_x;
-  double last_y;
+  int offset_x;
+  int offset_y;
+
+  int window_x;
+  int window_y;
+
+  int window_width;
+  int window_height;
 
   struct wm_server *server;
   struct wm_seat *seat;
+  struct wm_surface *focused_surface;
 
   struct wlr_cursor *cursor;
 
@@ -30,5 +36,7 @@ struct wm_pointer {
 void wm_pointer_set_mode(struct wm_pointer* pointer, int mode);
 
 void wm_pointer_set_default_cursor(struct wm_pointer* pointer);
+
+void wm_pointer_set_resize_edge(struct wm_pointer* pointer, int resize_edge);
 
 #endif

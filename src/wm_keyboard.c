@@ -37,10 +37,10 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
 
     for (int i = 0; i < nsyms; i++) {
       xkb_keysym_t sym = syms[i];
-      if (sym == XKB_KEY_Escape) {
-        printf("Quit key received\n");
-        wl_display_terminate(keyboard->seat->server->wl_display);
-      }
+      // if (sym == XKB_KEY_Escape) {
+      //   printf("Quit key received\n");
+      //   wl_display_terminate(keyboard->seat->server->wl_display);
+      // }
       if (sym == XKB_KEY_F1) {
         exec_command("weston-terminal");
       }
