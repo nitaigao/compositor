@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "wm_seat.h"
 
 #include <stdlib.h>
@@ -40,11 +42,14 @@ static void handle_cursor_button(struct wl_listener *listener, void *data) {
   struct wm_pointer *pointer = wl_container_of(listener, pointer, button);
 
   if (event->state == WLR_BUTTON_RELEASED) {
-    pointer->mode = WM_POINTER_MODE_FREE;
+    wm_pointer_set_mode(pointer, WM_POINTER_MODE_FREE);
   }
 
   wlr_seat_pointer_notify_button(pointer->seat->seat, event->time_msec, event->button, event->state);
 }
+
+#define wl_list_first(head, pos, member) \
+  wl_container_of((head)->next, pos, link)
 
 static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
   pointer->delta_x = pointer->cursor->x - pointer->last_x;
@@ -55,17 +60,23 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
   int list_length = wl_list_length(&pointer->server->windows);
 
   if (list_length > 0) {
-    struct wm_window *window;
-    wl_list_for_each(window, &pointer->server->windows, link) {
-      break;
+    struct wm_window *window = wl_list_first(
+      &pointer->server->windows, window, link);
+
+    if (pointer->mode == WM_POINTER_MODE_RESIZE) {
+      int new_width = window->width + pointer->delta_x;
+      int new_height = window->height + pointer->delta_y;
+      window->width = new_width;
+      window->height = new_height;
+      wlr_xdg_toplevel_set_size(window->surface->xdg_surface, new_width, new_height);
     }
 
     if (pointer->mode == WM_POINTER_MODE_MOVE) {
       int list_length = wl_list_length(&pointer->server->windows);
 
       if (list_length > 0) {
-        window->x += pointer->delta_x;
-        window->y += pointer->delta_y;
+        window->x += pointer->delta_x * 2;
+        window->y += pointer->delta_y * 2;
       }
     }
 
@@ -73,8 +84,8 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
     double local_y = pointer->cursor->y - window->y;
 
     double sx, sy;
-    struct wlr_surface *surface = wlr_surface_surface_at(window->surface->surface,
-      local_x, local_y, &sx, &sy);
+    struct wlr_surface *surface = wlr_surface_surface_at(
+      window->surface->surface, local_x, local_y, &sx, &sy);
 
     if (surface) {
       wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
@@ -109,6 +120,18 @@ static void handle_axis(struct wl_listener *listener, void *data) {
 static void handle_request_set_cursor(struct wl_listener *listener, void *data) {
   struct wm_pointer *pointer = wl_container_of(listener, pointer, request_set_cursor);
   struct wlr_seat_pointer_request_set_cursor_event *event = data;
+
+  struct wlr_surface *focused_surface =
+		event->seat_client->seat->pointer_state.focused_surface;
+
+  struct wm_window *window = wm_server_window_at_point(pointer->server,
+    pointer->cursor->x, pointer->cursor->y);
+
+  if (window != NULL && window->surface->surface != focused_surface) {
+    wm_pointer_set_default_cursor(pointer);
+		return;
+  }
+
   wlr_cursor_set_surface(pointer->cursor,
     event->surface, event->hotspot_x, event->hotspot_y);
 }
@@ -141,8 +164,7 @@ void wm_seat_create_pointer(struct wm_seat* seat) {
 
   wlr_cursor_attach_output_layout(seat->pointer->cursor, seat->server->layout);
 
-  wlr_xcursor_manager_set_cursor_image(seat->server->xcursor_manager,
-    "left_ptr", seat->pointer->cursor);
+  wm_pointer_set_default_cursor(seat->pointer);
 
   wl_signal_add(&seat->pointer->cursor->events.motion_absolute,
     &seat->pointer->cursor_motion_absolute);

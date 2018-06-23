@@ -14,3 +14,14 @@ void wm_window_focus(struct wm_window* window) {
     wlr_xdg_toplevel_v6_set_activated(window->surface->xdg_surface_v6, true);
   }
 }
+
+bool wm_window_intersects_point(struct wm_window* window, int x, int y) {
+  struct wlr_box box = {
+    .x = window->x,
+    .y = window->y,
+    .width = window->width,
+    .height = window->height
+  };
+  bool contains_point = wlr_box_contains_point(&box, x, y);
+  return contains_point;
+}

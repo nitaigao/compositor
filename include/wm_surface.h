@@ -22,7 +22,7 @@ struct wm_surface {
   struct wl_listener map;
   struct wl_listener unmap;
   struct wl_listener move;
-  struct wl_listener new_popup;
+  struct wl_listener resize;
   struct wl_listener new_subsurface;
 };
 

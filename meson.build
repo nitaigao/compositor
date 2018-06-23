@@ -1,4 +1,4 @@
-project('compositor', 'c', default_options : ['c_std=gnu11'])
+project('compositor', 'c', default_options : ['c_std=gnu11', '-D_POSIX_MONOTONIC_CLOCK', '-D_POSIX_C_SOURCE=200809L'])
 
 wlroots = dependency('wlroots')
 wayland = dependency('wayland-server')
@@ -10,6 +10,7 @@ executable('compositor',
   'src/main.c',
   'src/wm_keyboard.c',
   'src/wm_output.c',
+  'src/wm_pointer.c',
   'src/wm_seat.c',
   'src/wm_server.c',
   'src/wm_surface.c',

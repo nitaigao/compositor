@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "wm_surface.h"
 
 #include <stdlib.h>
@@ -49,6 +51,8 @@ void handle_map(struct wl_listener *listener, void *data) {
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
   window->x = 0;
   window->y = 0;
+  window->width = surface->surface->current->width;
+  window->height = surface->surface->current->height;
   window->surface = surface;
 
   surface->window = window;
@@ -99,7 +103,18 @@ void handle_move(struct wl_listener *listener, void *data) {
   seat->pointer->mode = WM_POINTER_MODE_MOVE;
 }
 
-static void handle_new_popup(struct wl_listener *listener, void *data) { }
+static void handle_resize(struct wl_listener *listener, void *data) {
+  struct wm_surface *surface =
+		wl_container_of(listener, surface, resize);
+
+  struct wlr_wl_shell_surface_resize_event *e = data;
+
+  struct wm_seat* seat = wm_seat_find_or_create(surface->server, e->seat->seat->name);
+
+  if (seat->pointer) {
+    wm_pointer_set_mode(seat->pointer, WM_POINTER_MODE_RESIZE);
+  }
+}
 
 struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
@@ -120,8 +135,8 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->move.notify = handle_move;
   wl_signal_add(&xdg_surface_v6->toplevel->events.request_move, &wm_surface->move);
 
-  wm_surface->new_popup.notify = handle_new_popup;
-	wl_signal_add(&xdg_surface_v6->events.new_popup, &wm_surface->new_popup);
+  wm_surface->resize.notify = handle_resize;
+	wl_signal_add(&xdg_surface_v6->toplevel->events.request_resize, &wm_surface->resize);
 
   return wm_surface;
 }
@@ -146,6 +161,9 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
 
   wm_surface->move.notify = handle_move;
   wl_signal_add(&xdg_surface->toplevel->events.request_move, &wm_surface->move);
+
+  wm_surface->resize.notify = handle_resize;
+	wl_signal_add(&xdg_surface->toplevel->events.request_resize, &wm_surface->resize);
 
   return wm_surface;
 }
