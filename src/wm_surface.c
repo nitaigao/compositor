@@ -170,26 +170,20 @@ static void handle_resize(struct wl_listener *listener, void *data) {
 static void handle_xdg_v6_maximize(struct wl_listener *listener, void *data) {
   (void)data;
 	struct wm_surface *surface = wl_container_of(listener, surface, maximize);
-
 	struct wm_window *window = surface->window;
-
 	if (surface->xdg_surface_v6->role != WLR_XDG_SURFACE_V6_ROLE_TOPLEVEL) {
 		return;
   }
-
   wm_window_maximize(window, !window->maximized);
 }
 
 static void handle_xdg_maximize(struct wl_listener *listener, void *data) {
   (void)data;
 	struct wm_surface *surface = wl_container_of(listener, surface, maximize);
-
 	struct wm_window *window = surface->window;
-
 	if (surface->xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
 		return;
   }
-
   wm_window_maximize(window, !window->maximized);
 }
 
