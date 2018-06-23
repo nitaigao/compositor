@@ -1,6 +1,6 @@
-project('compositor', 'c', default_options : [
+project('boxy', 'c', default_options : [
   'warning_level=3',
-	'werror=true',
+  'werror=true',
   'c_std=gnu11'
 ])
 
@@ -10,7 +10,7 @@ xkbcommon = dependency('xkbcommon')
 
 include_directories = include_directories('include', '/usr/include/pixman-1')
 
-executable('compositor',
+executable('boxy',
   'src/main.c',
   'src/wm_keyboard.c',
   'src/wm_output.c',
