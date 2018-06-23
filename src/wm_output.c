@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "wm_output.h"
 
 #include <stdio.h>
@@ -27,11 +29,13 @@ void wm_output_destroy(struct wm_output* output) {
 }
 
 static void output_frame_notify(struct wl_listener *listener, void *data) {
+  (void)data;
   struct wm_output *output = wl_container_of(listener, output, frame);
   wm_output_render(output);
 }
 
 static void output_destroy_notify(struct wl_listener *listener, void *data) {
+  (void)data;
   struct wm_output *output = wl_container_of(listener, output, destroy);
 
   wl_list_remove(&output->link);
@@ -40,9 +44,11 @@ static void output_destroy_notify(struct wl_listener *listener, void *data) {
   wm_output_destroy(output);
 }
 
-struct wm_output* wm_output_create(struct wlr_output* wlr_output, struct wlr_output_layout *layout, struct wm_server *server) {
+struct wm_output* wm_output_create(struct wlr_output* wlr_output,
+  struct wlr_output_layout *layout, struct wm_server *server) {
   if (!wl_list_empty(&wlr_output->modes)) {
-    struct wlr_output_mode *mode = wl_container_of(wlr_output->modes.prev, mode, link);
+    struct wlr_output_mode *mode = wl_container_of(wlr_output->modes.prev,
+      mode, link);
     wlr_output_set_mode(wlr_output, mode);
   }
 
@@ -65,6 +71,8 @@ struct wm_output* wm_output_create(struct wlr_output* wlr_output, struct wlr_out
   if (strcmp(wlr_output->name, "X11-1") == 0) {
     wlr_output_set_scale(wlr_output, 2.0);
   }
+
+  setenv("GDK_SCALE", "2", true);
 
   wlr_xcursor_manager_load(server->xcursor_manager, wlr_output->scale);
 
@@ -112,14 +120,21 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
 
   float matrix[16];
 
-  enum wl_output_transform transform = wlr_output_transform_invert(surface->current->transform);
-	wlr_matrix_project_box(matrix, &box, transform, 0, output->wlr_output->transform_matrix);
+  enum wl_output_transform transform = wlr_output_transform_invert(
+    surface->current->transform);
 
-  struct wlr_renderer *renderer = wlr_backend_get_renderer(output->wlr_output->backend);
+	wlr_matrix_project_box(matrix, &box, transform, 0,
+    output->wlr_output->transform_matrix);
+
+  struct wlr_renderer *renderer = wlr_backend_get_renderer(
+    output->wlr_output->backend);
+
   wlr_render_texture_with_matrix(renderer, texture, matrix, 1.0f);
 }
 
 void send_frame_done(struct wlr_surface *surface, int sx, int sy, void *data) {
+  (void)sx;
+  (void)sy;
   struct timespec* now = data;
   wlr_surface_send_frame_done(surface, now);
 }
@@ -147,10 +162,12 @@ void wm_output_render(struct wm_output* output) {
       };
 
     if (window->surface->type == WM_SURFACE_TYPE_XDG) {
-      wlr_xdg_surface_for_each_surface(window->surface->xdg_surface, render_surface, &render_data);
+      wlr_xdg_surface_for_each_surface(window->surface->xdg_surface,
+        render_surface, &render_data);
     }
     if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
-      wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6, render_surface, &render_data);
+      wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6,
+        render_surface, &render_data);
     }
     if (window->surface->type == WM_SURFACE_TYPE_X11) {
       render_surface(window->surface->surface, window->x, window->y, &render_data);

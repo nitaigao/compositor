@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "wm_surface.h"
 
 #include <stdlib.h>
@@ -31,7 +33,39 @@
 #include "wm_seat.h"
 #include "wm_pointer.h"
 
+static void handle_xdg_v6_commit(struct wl_listener *listener, void *data) {
+  (void)data;
+  struct wm_surface *surface =
+		wl_container_of(listener, surface, commit);
+
+  if (!surface->xdg_surface_v6->mapped) {
+    return;
+  }
+
+  struct wlr_box geometry;
+	wlr_xdg_surface_v6_get_geometry(surface->xdg_surface_v6, &geometry);
+  wm_window_commit_pending_movement(surface->window,
+    geometry.width, geometry.height);
+}
+
+static void handle_xdg_commit(struct wl_listener *listener, void *data) {
+  (void)data;
+  struct wm_surface *surface =
+		wl_container_of(listener, surface, commit);
+
+  if (!surface->xdg_surface->mapped) {
+    return;
+  }
+
+  struct wlr_box geometry;
+	wlr_xdg_surface_get_geometry(surface->xdg_surface, &geometry);
+  wm_window_commit_pending_movement(surface->window,
+    geometry.width, geometry.height);
+}
+
 void handle_map(struct wl_listener *listener, void *data) {
+  (void)data;
+
   struct wm_surface *surface = wl_container_of(listener, surface, map);
 
   if (surface->type == WM_SURFACE_TYPE_X11) {
@@ -47,9 +81,13 @@ void handle_map(struct wl_listener *listener, void *data) {
   }
 
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
-  window->x = 0;
-  window->y = 0;
+  window->x = 50;
+  window->y = 50;
+  window->width = surface->surface->current->width;
+  window->height = surface->surface->current->height;
   window->surface = surface;
+  window->pending_height = window->height;
+  window->pending_y = window->y;
 
   surface->window = window;
 
@@ -65,6 +103,8 @@ void handle_map(struct wl_listener *listener, void *data) {
 }
 
 void handle_unmap(struct wl_listener *listener, void *data) {
+  (void)data;
+
   struct wm_surface *wm_surface = wl_container_of(listener, wm_surface, unmap);
 
   wl_list_remove(&wm_surface->window->link);
@@ -96,7 +136,57 @@ void handle_move(struct wl_listener *listener, void *data) {
   struct wm_surface *surface = wl_container_of(listener, surface, move);
   struct wlr_wl_shell_surface_move_event *event = data;
   struct wm_seat *seat = wm_seat_find_or_create(surface->server, event->seat->seat->name);
-  seat->pointer->mode = WM_POINTER_MODE_MOVE;
+
+  if (seat->pointer && seat->pointer->mode != WM_POINTER_MODE_MOVE) {
+    seat->pointer->offset_x = seat->pointer->cursor->x;
+    seat->pointer->offset_y = seat->pointer->cursor->y;
+    seat->pointer->window_x = surface->window->x;
+    seat->pointer->window_y = surface->window->y;
+    seat->pointer->window_width = surface->window->width;
+    seat->pointer->window_height = surface->window->height;
+    seat->pointer->mode = WM_POINTER_MODE_MOVE;
+  }
+}
+
+static void handle_resize(struct wl_listener *listener, void *data) {
+  struct wm_surface *surface =
+		wl_container_of(listener, surface, resize);
+
+  struct wlr_wl_shell_surface_resize_event *e = data;
+
+  struct wm_seat* seat = wm_seat_find_or_create(surface->server, e->seat->seat->name);
+
+  if (seat->pointer && seat->pointer->mode != WM_POINTER_MODE_RESIZE) {
+    seat->pointer->offset_x = seat->pointer->cursor->x;
+    seat->pointer->offset_y = seat->pointer->cursor->y;
+    seat->pointer->window_x = surface->window->x;
+    seat->pointer->window_y = surface->window->y;
+    seat->pointer->window_width = surface->window->width;
+    seat->pointer->window_height = surface->window->height;
+
+    wm_pointer_set_mode(seat->pointer, WM_POINTER_MODE_RESIZE);
+    wm_pointer_set_resize_edge(seat->pointer, e->edges);
+  }
+}
+
+static void handle_xdg_v6_maximize(struct wl_listener *listener, void *data) {
+  (void)data;
+	struct wm_surface *surface = wl_container_of(listener, surface, maximize);
+	struct wm_window *window = surface->window;
+	if (surface->xdg_surface_v6->role != WLR_XDG_SURFACE_V6_ROLE_TOPLEVEL) {
+		return;
+  }
+  wm_window_maximize(window, !window->maximized);
+}
+
+static void handle_xdg_maximize(struct wl_listener *listener, void *data) {
+  (void)data;
+	struct wm_surface *surface = wl_container_of(listener, surface, maximize);
+	struct wm_window *window = surface->window;
+	if (surface->xdg_surface->role != WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+		return;
+  }
+  wm_window_maximize(window, !window->maximized);
 }
 
 void wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server) {
@@ -116,10 +206,24 @@ void wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct 
   wl_signal_add(&xdg_surface_v6->events.unmap, &wm_surface->unmap);
 
   wm_surface->move.notify = handle_move;
-  wl_signal_add(&xdg_surface_v6->toplevel->events.request_move, &wm_surface->move);
+  wl_signal_add(&xdg_surface_v6->toplevel->events.request_move,
+    &wm_surface->move);
+
+  wm_surface->resize.notify = handle_resize;
+	wl_signal_add(&xdg_surface_v6->toplevel->events.request_resize,
+    &wm_surface->resize);
+
+  wm_surface->maximize.notify = handle_xdg_v6_maximize;
+	wl_signal_add(&xdg_surface_v6->toplevel->events.request_maximize,
+    &wm_surface->maximize);
+
+  wm_surface->commit.notify = handle_xdg_v6_commit;
+	wl_signal_add(&xdg_surface_v6->surface->events.commit, &wm_surface->commit);
 }
 
-void wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, struct wm_server* server) {
+void wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
+  struct wm_server* server) {
+
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
   wm_surface->xdg_surface = xdg_surface;
@@ -136,7 +240,19 @@ void wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, struct wm_server
   wl_signal_add(&xdg_surface->events.unmap, &wm_surface->unmap);
 
   wm_surface->move.notify = handle_move;
-  wl_signal_add(&xdg_surface->toplevel->events.request_move, &wm_surface->move);
+  wl_signal_add(&xdg_surface->toplevel->events.request_move,
+    &wm_surface->move);
+
+  wm_surface->resize.notify = handle_resize;
+	wl_signal_add(&xdg_surface->toplevel->events.request_resize,
+    &wm_surface->resize);
+
+  wm_surface->maximize.notify = handle_xdg_maximize;
+	wl_signal_add(&xdg_surface->toplevel->events.request_maximize,
+    &wm_surface->maximize);
+
+  wm_surface->commit.notify = handle_xdg_commit;
+	wl_signal_add(&xdg_surface->surface->events.commit, &wm_surface->commit);
 }
 
 void wm_surface_xwayland_create(struct wlr_xwayland_surface* xwayland_surface, struct wm_server* server) {

@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "wm_seat.h"
 
 #include <stdlib.h>
@@ -20,11 +22,13 @@
 #include "wm_output.h"
 
 void seat_destroy_notify(struct wl_listener *listener, void *data) {
+  (void)data;
   struct wm_seat *seat = wl_container_of(listener, seat, destroy);
   wm_seat_destroy(seat);
 }
 
 void keyboard_modifiers_notify(struct wl_listener *listener, void *data) {
+  (void)data;
   struct wm_keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
   wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat, &keyboard->device->keyboard->modifiers);
 }
@@ -40,40 +44,48 @@ static void handle_cursor_button(struct wl_listener *listener, void *data) {
   struct wm_pointer *pointer = wl_container_of(listener, pointer, button);
 
   if (event->state == WLR_BUTTON_RELEASED) {
-    pointer->mode = WM_POINTER_MODE_FREE;
+    wm_pointer_set_mode(pointer, WM_POINTER_MODE_FREE);
   }
 
   wlr_seat_pointer_notify_button(pointer->seat->seat, event->time_msec, event->button, event->state);
 }
 
+#define wl_list_first(head, pos, member) \
+  wl_container_of((head)->next, pos, link)
+
 static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
-  pointer->delta_x = pointer->cursor->x - pointer->last_x;
-  pointer->delta_y = pointer->cursor->y - pointer->last_y;
-  pointer->last_x = pointer->cursor->x;
-  pointer->last_y = pointer->cursor->y;
+  pointer->focused_surface = NULL;
 
   int list_length = wl_list_length(&pointer->server->windows);
 
   if (list_length > 0) {
-    struct wm_window *window;
-    wl_list_for_each(window, &pointer->server->windows, link) {
-      break;
+    struct wm_window *window = wl_list_first(
+      &pointer->server->windows, window, link);
+
+    window->update_x = false;
+    window->update_y = false;
+    pointer->focused_surface = window->surface;
+
+    if (pointer->mode == WM_POINTER_MODE_RESIZE) {
+      wm_window_resize(window, pointer);
     }
 
     if (pointer->mode == WM_POINTER_MODE_MOVE) {
-      int list_length = wl_list_length(&pointer->server->windows);
+      int dx = pointer->cursor->x - pointer->offset_x;
+      int dy = pointer->cursor->y - pointer->offset_y;
 
-      if (list_length > 0) {
-        window->x += pointer->delta_x;
-        window->y += pointer->delta_y;
-      }
+      int x = pointer->window_x + dx;
+      int y = pointer->window_y + dy;
+
+      wm_window_move(window, x, y);
     }
 
     double local_x = pointer->cursor->x - window->x;
     double local_y = pointer->cursor->y - window->y;
 
     double sx, sy;
-    struct wlr_surface *surface = wlr_surface_surface_at(window->surface->surface, local_x, local_y, &sx, &sy);
+    struct wlr_surface *surface = wlr_surface_surface_at(
+      window->surface->surface, local_x, local_y, &sx, &sy);
 
     if (surface) {
       wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
@@ -108,7 +120,21 @@ static void handle_axis(struct wl_listener *listener, void *data) {
 static void handle_request_set_cursor(struct wl_listener *listener, void *data) {
   struct wm_pointer *pointer = wl_container_of(listener, pointer, request_set_cursor);
   struct wlr_seat_pointer_request_set_cursor_event *event = data;
-  wlr_cursor_set_surface(pointer->cursor, event->surface, event->hotspot_x, event->hotspot_y);
+
+  struct wlr_surface *focused_surface =
+		event->seat_client->seat->pointer_state.focused_surface;
+
+  if (!pointer->focused_surface) {
+    return;
+  }
+
+  if (pointer->focused_surface->surface != focused_surface) {
+    wm_pointer_set_default_cursor(pointer);
+		return;
+  }
+
+  wlr_cursor_set_surface(pointer->cursor,
+    event->surface, event->hotspot_x, event->hotspot_y);
 }
 
 void wm_seat_destroy(struct wm_seat* seat) {
@@ -132,31 +158,34 @@ void wm_seat_create_pointer(struct wm_seat* seat) {
   seat->pointer->server = seat->server;
   seat->pointer->seat = seat;
   seat->pointer->cursor = wlr_cursor_create();
-  seat->pointer->last_x = 0;
-  seat->pointer->last_y = 0;
-  seat->pointer->delta_x = 0;
-  seat->pointer->delta_y = 0;
 
   wlr_cursor_attach_output_layout(seat->pointer->cursor, seat->server->layout);
-  wlr_xcursor_manager_set_cursor_image(seat->server->xcursor_manager, "left_ptr", seat->pointer->cursor);
 
-  wl_signal_add(&seat->pointer->cursor->events.motion_absolute, &seat->pointer->cursor_motion_absolute);
+  wm_pointer_set_default_cursor(seat->pointer);
+
+  wl_signal_add(&seat->pointer->cursor->events.motion_absolute,
+    &seat->pointer->cursor_motion_absolute);
+
   seat->pointer->cursor_motion_absolute.notify = handle_cursor_motion_absolute;
 
   wl_signal_add(&seat->pointer->cursor->events.axis, &seat->pointer->axis);
   seat->pointer->axis.notify = handle_axis;
 
-  wl_signal_add(&seat->pointer->cursor->events.motion, &seat->pointer->cursor_motion);
+  wl_signal_add(&seat->pointer->cursor->events.motion,
+    &seat->pointer->cursor_motion);
+
   seat->pointer->cursor_motion.notify = handle_cursor_motion;
 
   wl_signal_add(&seat->pointer->cursor->events.button, &seat->pointer->button);
   seat->pointer->button.notify = handle_cursor_button;
 
-  wl_signal_add(&seat->seat->events.request_set_cursor, &seat->pointer->request_set_cursor);
+  wl_signal_add(&seat->seat->events.request_set_cursor,
+    &seat->pointer->request_set_cursor);
 	seat->pointer->request_set_cursor.notify = handle_request_set_cursor;
 }
 
-void wm_seat_attach_pointing_device(struct wm_seat* seat, struct wlr_input_device* device) {
+void wm_seat_attach_pointing_device(struct wm_seat* seat,
+  struct wlr_input_device* device) {
   if (seat->pointer == NULL) {
     wm_seat_create_pointer(seat);
   }
@@ -169,7 +198,8 @@ void wm_seat_attach_pointing_device(struct wm_seat* seat, struct wlr_input_devic
   wlr_cursor_attach_input_device(seat->pointer->cursor, device);
 }
 
-void wm_seat_attach_keyboard_device(struct wm_seat* seat, struct wlr_input_device* device) {
+void wm_seat_attach_keyboard_device(struct wm_seat* seat,
+  struct wlr_input_device* device) {
     struct wm_keyboard *keyboard = calloc(1, sizeof(struct wm_keyboard));
     keyboard->device = device;
     keyboard->seat = seat;
@@ -202,7 +232,8 @@ void wm_seat_attach_keyboard_device(struct wm_seat* seat, struct wlr_input_devic
       exit(1);
     }
 
-    struct xkb_keymap *keymap = xkb_map_new_from_names(context, &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+    struct xkb_keymap *keymap = xkb_map_new_from_names(context,
+      &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
     wlr_keyboard_set_keymap(device->keyboard, keymap);
 
@@ -210,7 +241,8 @@ void wm_seat_attach_keyboard_device(struct wm_seat* seat, struct wlr_input_devic
     xkb_keymap_unref(keymap);
 }
 
-struct wm_seat* wm_seat_find_or_create(struct wm_server* server, const char* seat_name) {
+struct wm_seat* wm_seat_find_or_create(struct wm_server* server,
+  const char* seat_name) {
   struct wm_seat *seat;
   wl_list_for_each(seat, &server->seats, link) {
     if (strcmp(seat->name, seat_name) == 0) {

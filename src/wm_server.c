@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include "wm_server.h"
 
 #include <stdlib.h>
@@ -69,7 +71,7 @@ void wm_server_set_cursors(struct wm_server* server) {
   wlr_xcursor_manager_load(server->xcursor_manager, 1);
   // wlr_xcursor_manager_load(server->xcursor_manager, 2);
 
-  // struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(server->xcursor_manager, "left_ptr", 1);
+  // struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(server->xcursor_manager, DEFAULT_CURSOR, 1);
   // if (xcursor != NULL) {
   //   struct wlr_xcursor_image *image = xcursor->images[0];
   //   wlr_xwayland_set_cursor(
@@ -109,8 +111,6 @@ void wm_server_connect_input(struct wm_server* server, struct wlr_input_device* 
     seat->seat->capabilities |= WL_SEAT_CAPABILITY_POINTER;
   }
 
-  printf("%d\n", seat->seat->capabilities);
-
   wlr_seat_set_capabilities(seat->seat, seat->seat->capabilities);
 }
 
@@ -123,7 +123,6 @@ void wm_server_run(struct wm_server* server) {
   printf("Backend started\n");
   setenv("WAYLAND_DISPLAY", server->socket, true);
   printf("Running compositor on wayland display '%s'\n", server->socket);
-
 
   wl_display_run(server->wl_display);
 }
@@ -169,7 +168,8 @@ void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
 
 void handle_xwayland_surface(struct wl_listener *listener, void *data) {
   struct wlr_xwayland_surface *xwayland_surface = data;
-  struct wm_server *server = wl_container_of(listener, server, xwayland_surface);
+  struct wm_server *server = wl_container_of(listener,
+    server, xwayland_surface);
 
   printf("New XWayland Surface\n");
   wlr_xwayland_surface_ping(xwayland_surface);
@@ -224,14 +224,16 @@ struct wm_server* wm_server_create() {
   server->xcursor_manager = wlr_xcursor_manager_create("default", 24);
 
   if (!server->xcursor_manager) {
-    wlr_log(L_ERROR, "Failed to load left_ptr cursor");
+    wlr_log(L_ERROR, "Failed to load cursor");
     return NULL;
   }
 
   server->server_decoration_manager = wlr_server_decoration_manager_create(server->wl_display);
-  wlr_server_decoration_manager_set_default_mode(server->server_decoration_manager, WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
+  wlr_server_decoration_manager_set_default_mode(server->server_decoration_manager,
+    WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
 
-  server->primary_selection_device_manager = wlr_primary_selection_device_manager_create(server->wl_display);
+  server->primary_selection_device_manager =
+    wlr_primary_selection_device_manager_create(server->wl_display);
 
   server->linux_dmabuf = wlr_linux_dmabuf_create(server->wl_display, server->renderer);
 
@@ -252,4 +254,15 @@ struct wm_server* wm_server_create() {
   wm_server_set_cursors(server);
 
   return server;
+}
+
+struct wm_window* wm_server_window_at_point(struct wm_server* server, int x, int y) {
+  struct wm_window* window;
+  wl_list_for_each(window, &server->windows, link) {
+    bool intersects = wm_window_intersects_point(window, x, y);
+    if (intersects) {
+      return window;
+    }
+  }
+  return NULL;
 }
