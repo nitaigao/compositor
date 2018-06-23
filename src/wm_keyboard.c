@@ -27,11 +27,14 @@ void exec_command(const char* shell_cmd) {
   }
 }
 
-void wm_keyboard_key_event(struct wm_keyboard *keyboard, struct wlr_event_keyboard_key *event) {
+void wm_keyboard_key_event(struct wm_keyboard *keyboard,
+  struct wlr_event_keyboard_key *event) {
   if (event->state == 0) {
     uint32_t keycode = event->keycode + 8;
     const xkb_keysym_t *syms;
-    int nsyms = xkb_state_key_get_syms(keyboard->device->keyboard->xkb_state, keycode, &syms);
+    int nsyms = xkb_state_key_get_syms(keyboard->device->keyboard->xkb_state,
+      keycode, &syms);
+
     for (int i = 0; i < nsyms; i++) {
       xkb_keysym_t sym = syms[i];
       if (sym == XKB_KEY_Escape) {

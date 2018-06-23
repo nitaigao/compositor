@@ -237,9 +237,11 @@ struct wm_server* wm_server_create() {
   }
 
   server->server_decoration_manager = wlr_server_decoration_manager_create(server->wl_display);
-  wlr_server_decoration_manager_set_default_mode(server->server_decoration_manager, WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
+  wlr_server_decoration_manager_set_default_mode(server->server_decoration_manager,
+    WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
 
-  server->primary_selection_device_manager = wlr_primary_selection_device_manager_create(server->wl_display);
+  server->primary_selection_device_manager =
+    wlr_primary_selection_device_manager_create(server->wl_display);
 
   server->linux_dmabuf = wlr_linux_dmabuf_create(server->wl_display, server->renderer);
 

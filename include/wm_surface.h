@@ -26,7 +26,10 @@ struct wm_surface {
   struct wl_listener new_subsurface;
 };
 
-struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server);
-struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, struct wm_server* server);
+struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6,
+  struct wm_server* server);
+
+struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
+  struct wm_server* server);
 
 #endif

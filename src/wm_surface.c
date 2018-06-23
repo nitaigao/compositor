@@ -126,7 +126,9 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   return wm_surface;
 }
 
-struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface, struct wm_server* server) {
+struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
+  struct wm_server* server) {
+
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
   wm_surface->xdg_surface = xdg_surface;

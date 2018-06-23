@@ -40,7 +40,8 @@ static void output_destroy_notify(struct wl_listener *listener, void *data) {
   wm_output_destroy(output);
 }
 
-struct wm_output* wm_output_create(struct wlr_output* wlr_output, struct wlr_output_layout *layout, struct wm_server *server) {
+struct wm_output* wm_output_create(struct wlr_output* wlr_output,
+  struct wlr_output_layout *layout, struct wm_server *server) {
   if (!wl_list_empty(&wlr_output->modes)) {
     struct wlr_output_mode *mode = wl_container_of(wlr_output->modes.prev, mode, link);
     wlr_output_set_mode(wlr_output, mode);
@@ -142,10 +143,12 @@ void wm_output_render(struct wm_output* output) {
       };
 
     if (window->surface->type == WM_SURFACE_TYPE_XDG) {
-      wlr_xdg_surface_for_each_surface(window->surface->xdg_surface, render_surface, &render_data);
+      wlr_xdg_surface_for_each_surface(window->surface->xdg_surface,
+        render_surface, &render_data);
     }
     if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
-      wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6, render_surface, &render_data);
+      wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6,
+        render_surface, &render_data);
     }
   }
 

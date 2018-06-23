@@ -47,6 +47,7 @@ void wm_server_set_cursors(struct wm_server* server);
 
 void wm_server_run(struct wm_server* server);
 
-struct wm_seat* wm_server_find_or_create_seat(struct wm_server* server, const char* seat_name);
+struct wm_seat* wm_server_find_or_create_seat(struct wm_server* server,
+  const char* seat_name);
 
 #endif
