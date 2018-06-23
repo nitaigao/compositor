@@ -71,7 +71,13 @@ static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
     }
 
     if (pointer->mode == WM_POINTER_MODE_MOVE) {
-      wm_window_move(window, pointer);
+      int dx = pointer->cursor->x - pointer->offset_x;
+      int dy = pointer->cursor->y - pointer->offset_y;
+
+      int x = pointer->window_x + dx;
+      int y = pointer->window_y + dy;
+
+      wm_window_move(window, x, y);
     }
 
     double local_x = pointer->cursor->x - window->x;
