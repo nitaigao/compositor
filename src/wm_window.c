@@ -5,6 +5,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_cursor.h>
 
+#include "wm_server.h"
 #include "wm_surface.h"
 #include "wm_pointer.h"
 
@@ -18,14 +19,19 @@ void wm_window_focus(struct wm_window* window) {
   }
 }
 
-bool wm_window_intersects_point(struct wm_window* window, int x, int y) {
-  struct wlr_box box = {
+struct wlr_box wm_window_geometry(struct wm_window* window) {
+  struct wlr_box geometry = {
     .x = window->x,
     .y = window->y,
     .width = window->width,
     .height = window->height
   };
-  bool contains_point = wlr_box_contains_point(&box, x, y);
+  return geometry;
+}
+
+bool wm_window_intersects_point(struct wm_window* window, int x, int y) {
+  struct wlr_box geometry = wm_window_geometry(window);
+  bool contains_point = wlr_box_contains_point(&geometry, x, y);
   return contains_point;
 }
 
@@ -43,7 +49,6 @@ void wm_window_commit_pending_movement(struct wm_window* window, int width, int 
       window->pending_width - width;
   }
 }
-
 
 void wm_window_resize(struct wm_window* window, struct wm_pointer* pointer) {
     int dx = pointer->cursor->x - pointer->offset_x;
@@ -118,10 +123,55 @@ void wm_window_resize(struct wm_window* window, struct wm_pointer* pointer) {
     wlr_xdg_toplevel_set_size(window->surface->xdg_surface, constrained_width, constrained_height);
 }
 
-void wm_window_move(struct wm_window* window, struct wm_pointer* pointer) {
-  int dx = pointer->cursor->x - pointer->offset_x;
-  int dy = pointer->cursor->y - pointer->offset_y;
+void wm_window_move(struct wm_window* window, int x, int y) {
+  window->x = x;
+  window->y = y;
+}
 
-  window->x = pointer->window_x + dx;
-  window->y = pointer->window_y + dy;
+void wm_window_maximize(struct wm_window* window, bool maximized) {
+  window->maximized = maximized;
+
+  if (maximized) {
+    wm_window_save_geography(window);
+    struct wlr_output* output = wm_window_find_output(window);
+
+    struct wlr_box *fullscreen_box =
+      wlr_output_layout_get_box(window->surface->server->layout, output);
+
+    wm_window_move(window, fullscreen_box->x, fullscreen_box->y);
+
+    wlr_xdg_toplevel_set_size(window->surface->xdg_surface,
+      fullscreen_box->width, fullscreen_box->height);
+
+    wlr_xdg_toplevel_set_maximized(window->surface->xdg_surface, maximized);
+  } else {
+    wm_window_move(window, window->saved_x, window->saved_y);
+    wlr_xdg_toplevel_set_size(window->surface->xdg_surface,
+      window->saved_width, window->saved_height);
+
+    wlr_xdg_toplevel_set_maximized(window->surface->xdg_surface, maximized);
+  }
+}
+
+void wm_window_save_geography(struct wm_window* window) {
+  window->saved_x = window->x;
+  window->saved_y = window->y;
+  window->saved_width = window->saved_width;
+  window->saved_height = window->saved_height;
+}
+
+struct wlr_output* wm_window_find_output(struct wm_window* window) {
+  struct wlr_box geometry = wm_window_geometry(window);
+
+  double output_x, output_y;
+  wlr_output_layout_closest_point(window->surface->server->layout, NULL,
+    window->x + (double)geometry.width / 2,
+    window->y + (double)geometry.height / 2,
+    &output_x, &output_y
+  );
+
+  struct wlr_output* output = wlr_output_layout_output_at(
+    window->surface->server->layout, output_x, output_y);
+
+  return output;
 }
