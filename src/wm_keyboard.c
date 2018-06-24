@@ -29,19 +29,54 @@ void exec_command(const char* shell_cmd) {
 
 void wm_keyboard_key_event(struct wm_keyboard *keyboard,
   struct wlr_event_keyboard_key *event) {
-  if (event->state == 0) {
-    uint32_t keycode = event->keycode + 8;
-    const xkb_keysym_t *syms;
-    int nsyms = xkb_state_key_get_syms(keyboard->device->keyboard->xkb_state,
-      keycode, &syms);
 
+  struct xkb_state* state = keyboard->device->keyboard->xkb_state;
+  struct xkb_keymap* keymap = keyboard->device->keyboard->keymap;
+
+  xkb_mod_index_t super_index = xkb_keymap_mod_get_index(
+    keymap, XKB_MOD_NAME_LOGO);
+
+  int super = xkb_state_mod_index_is_active(state,
+    super_index, XKB_STATE_MODS_DEPRESSED);
+
+  xkb_mod_index_t shift_index = xkb_keymap_mod_get_index(
+    keymap, XKB_MOD_NAME_SHIFT);
+
+  int shift = xkb_state_mod_index_is_active(state,
+    shift_index, XKB_STATE_MODS_DEPRESSED);
+
+  xkb_mod_index_t ctrl_index = xkb_keymap_mod_get_index(
+    keymap, XKB_MOD_NAME_CTRL);
+
+  int ctrl = xkb_state_mod_index_is_active(state,
+    ctrl_index, XKB_STATE_MODS_DEPRESSED);
+
+  xkb_mod_index_t alt_index = xkb_keymap_mod_get_index(
+    keymap, XKB_MOD_NAME_ALT);
+
+  int alt = xkb_state_mod_index_is_active(state,
+    alt_index, XKB_STATE_MODS_DEPRESSED);
+
+  uint32_t keycode = event->keycode + 8;
+
+  const xkb_keysym_t *syms;
+  int nsyms = xkb_state_key_get_syms(state, keycode, &syms);
+
+  if (event->state == 0) {
     for (int i = 0; i < nsyms; i++) {
       xkb_keysym_t sym = syms[i];
-      if (sym == XKB_KEY_F1) {
-        exec_command("weston-terminal");
+      if (sym == XKB_KEY_BackSpace) {
+        if (ctrl && alt) {
+          wl_display_terminate(keyboard->seat->server->wl_display);
+        }
       }
-      if (sym == XKB_KEY_F2) {
-        exec_command("gnome-terminal");
+      if (sym == XKB_KEY_Return) {
+        if (super && !shift) {
+          exec_command("gnome-terminal");
+        }
+        if (super && shift) {
+          exec_command("weston-terminal");
+        }
       }
       if (sym == XKB_KEY_F3) {
         exec_command("gnome-calendar");
