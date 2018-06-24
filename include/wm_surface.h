@@ -3,10 +3,6 @@
 
 #include <wayland-server.h>
 
-#define WM_SURFACE_TYPE_X11 0
-#define WM_SURFACE_TYPE_XDG 1
-#define WM_SURFACE_TYPE_XDG_V6 2
-
 struct wlr_surface;
 
 typedef void (*wm_surface_render_handler)(struct wlr_surface *surface,
