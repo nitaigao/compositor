@@ -44,6 +44,7 @@ void wm_server_run(struct wm_server* server);
 struct wm_seat* wm_server_find_or_create_seat(struct wm_server* server,
   const char* seat_name);
 
-struct wm_window* wm_server_window_at_point(struct wm_server* server, int x, int y);
+struct wm_window* wm_server_window_at_point(struct wm_server* server,
+  int x, int y);
 
 #endif

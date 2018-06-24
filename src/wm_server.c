@@ -40,9 +40,6 @@
 #include "wm_shell_xdg_v6.h"
 
 void wm_server_destroy(struct wm_server* server) {
-  // wlr_xwayland_destroy(server->xwayland);
-  // server->xwayland = NULL;
-
   wlr_data_device_manager_destroy(server->data_device_manager);
   server->data_device_manager = NULL;
 
@@ -72,21 +69,6 @@ void wm_server_destroy(struct wm_server* server) {
 
 void wm_server_set_cursors(struct wm_server* server) {
   wlr_xcursor_manager_load(server->xcursor_manager, 1);
-  // wlr_xcursor_manager_load(server->xcursor_manager, 2);
-
-  // struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(server->xcursor_manager, DEFAULT_CURSOR, 1);
-  // if (xcursor != NULL) {
-  //   struct wlr_xcursor_image *image = xcursor->images[0];
-  //   wlr_xwayland_set_cursor(
-  //     server->xwayland,
-  //     image->buffer,
-  //     image->width * 4,
-  //     image->width,
-  //     image->height,
-  //     image->hotspot_x,
-  //     image->hotspot_y
-  //   );
-  // }
 }
 
 void wm_server_connect_output(struct wm_server* server, struct wlr_output* wlr_output) {
@@ -141,25 +123,6 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
   wm_server_connect_output(server, data);
 }
 
-void handle_xwayland_surface(struct wl_listener *listener, void *data) {
-  (void)listener;
-  (void)data;
-  // struct wlr_xwayland_surface *xwayland_surface = data;
-  // struct wm_server *server = wl_container_of(listener, server, xwayland_surface);
-
-  // printf("New XWayland Surface\n");
-
-  // wlr_xwayland_surface_ping(xwayland_surface);
-
-  // struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
-  // wm_surface->server = server;
-  // wm_surface->xwayland_surface = xwayland_surface;
-  // wm_surface->type = WM_SURFACE_TYPE_X11;
-
-  // wm_surface->map.notify = handle_map;
-  // wl_signal_add(&xwayland_surface->events.map, &wm_surface->map);
-}
-
 struct wm_server* wm_server_create() {
   struct wm_server* server = calloc(1, sizeof(struct wm_server));
 
@@ -199,10 +162,6 @@ struct wm_server* wm_server_create() {
 
   struct wm_shell* xdg_shell_v6 = wm_shell_xdg_v6_create(server);
   wl_list_insert(&server->shells, &xdg_shell_v6->link);
-
-  // server->xwayland = wlr_xwayland_create(server->wl_display, server->compositor, true);
-  // wl_signal_add(&server->xwayland->events.new_surface, &server->xwayland_surface);
-  // server->xwayland_surface.notify = handle_xwayland_surface;
 
   server->xcursor_manager = wlr_xcursor_manager_create("default", 24);
 
