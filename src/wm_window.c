@@ -9,16 +9,6 @@
 #include "wm_surface.h"
 #include "wm_pointer.h"
 
-void wm_window_focus(struct wm_window* window) {
-  if (window->surface->type == WM_SURFACE_TYPE_X11) {
-    wlr_xwayland_surface_activate(window->surface->xwayland_surface, true);
-  }
-
-  if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
-    wlr_xdg_toplevel_v6_set_activated(window->surface->xdg_surface_v6, true);
-  }
-}
-
 struct wlr_box wm_window_geometry(struct wm_window* window) {
   struct wlr_box geometry = {
     .x = window->x,
@@ -114,13 +104,8 @@ void wm_window_resize(struct wm_window* window, struct wm_pointer* pointer) {
     window->pending_y = y;
     window->pending_height = height;
 
-    struct wlr_xdg_toplevel_state state =
-      window->surface->xdg_surface->toplevel->current;
-
-    int constrained_height = height >= (int)state.min_height ? height : (int)state.min_height;
-    int constrained_width = width >= (int)state.min_width ? width : (int)state.min_width;
-
-    wlr_xdg_toplevel_set_size(window->surface->xdg_surface, constrained_width, constrained_height);
+    window->surface->toplevel_constrained_set_size(
+      window->surface, width, height);
 }
 
 void wm_window_move(struct wm_window* window, int x, int y) {
@@ -140,16 +125,16 @@ void wm_window_maximize(struct wm_window* window, bool maximized) {
 
     wm_window_move(window, fullscreen_box->x, fullscreen_box->y);
 
-    wlr_xdg_toplevel_set_size(window->surface->xdg_surface,
-      fullscreen_box->width, fullscreen_box->height);
+    window->surface->toplevel_set_maximized(window->surface, maximized);
 
-    wlr_xdg_toplevel_set_maximized(window->surface->xdg_surface, maximized);
+    window->surface->toplevel_set_size(window->surface,
+      fullscreen_box->width, fullscreen_box->height);
   } else {
     wm_window_move(window, window->saved_x, window->saved_y);
-    wlr_xdg_toplevel_set_size(window->surface->xdg_surface,
+    window->surface->toplevel_set_size(window->surface,
       window->saved_width, window->saved_height);
 
-    wlr_xdg_toplevel_set_maximized(window->surface->xdg_surface, maximized);
+    window->surface->toplevel_set_maximized(window->surface, maximized);
   }
 }
 

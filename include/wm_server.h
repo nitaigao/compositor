@@ -4,6 +4,8 @@
 #include <wayland-server.h>
 
 struct wm_server {
+  const char* socket;
+
   struct wl_display *wl_display;
   struct wl_event_loop *wl_event_loop;
 
@@ -12,8 +14,7 @@ struct wm_server {
   struct wlr_compositor *compositor;
   struct wlr_output_layout *layout;
   struct wlr_xwayland *xwayland;
-  struct wlr_xdg_shell_v6 *xdg_shell_v6;
-  struct wlr_xdg_shell *xdg_shell;
+
   struct wlr_xcursor_manager *xcursor_manager;
   struct wlr_xdg_output_manager* xdg_output_manager;
   struct wlr_data_device_manager *data_device_manager;
@@ -21,15 +22,13 @@ struct wm_server {
   struct wlr_server_decoration_manager *server_decoration_manager;
   struct wlr_linux_dmabuf *linux_dmabuf;
 
-  struct wl_listener xwayland_surface;
-  struct wl_listener xdg_shell_v6_surface;
-  struct wl_listener xdg_shell_surface;
   struct wl_listener new_input;
   struct wl_listener new_output;
-  struct wl_list windows;
+
   struct wl_list seats;
+  struct wl_list shells;
   struct wl_list outputs;
-  const char* socket;
+  struct wl_list windows;
 };
 
 struct wlr_input_device;

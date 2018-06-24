@@ -151,19 +151,17 @@ void wm_output_render(struct wm_output* output) {
 
   struct wm_window *window;
   wl_list_for_each_reverse(window, &server->windows, link) {
-      struct render_data render_data = {
-        .output = output,
-        .window = window
-      };
+    struct render_data render_data = {
+      .output = output,
+      .window = window
+    };
 
-    if (window->surface->type == WM_SURFACE_TYPE_XDG) {
-      wlr_xdg_surface_for_each_surface(window->surface->xdg_surface,
-        render_surface, &render_data);
+    if (!window->surface->render) {
+      printf("Surface has no render function\n");
+      continue;
     }
-    if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
-      wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6,
-        render_surface, &render_data);
-    }
+
+    window->surface->render(window->surface, render_surface, &render_data);
   }
 
   wl_list_for_each_reverse(window, &server->windows, link) {

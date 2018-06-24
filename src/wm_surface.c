@@ -33,45 +33,6 @@
 #include "wm_seat.h"
 #include "wm_pointer.h"
 
-void handle_map(struct wl_listener *listener, void *data) {
-  (void)data;
-
-  struct wm_surface *surface = wl_container_of(listener, surface, map);
-
-  if (surface->type == WM_SURFACE_TYPE_X11) {
-    surface->surface = surface->xwayland_surface->surface;
-  }
-
-  if (surface->type == WM_SURFACE_TYPE_XDG) {
-    surface->surface = surface->xdg_surface->surface;
-  }
-
-  if (surface->type == WM_SURFACE_TYPE_XDG_V6) {
-    surface->surface = surface->xdg_surface_v6->surface;
-  }
-
-  struct wm_window *window = calloc(1, sizeof(struct wm_window));
-  window->x = 50;
-  window->y = 50;
-  window->width = surface->surface->current->width;
-  window->height = surface->surface->current->height;
-  window->surface = surface;
-  window->pending_height = window->height;
-  window->pending_y = window->y;
-
-  surface->window = window;
-
-  wl_list_insert(&surface->server->windows, &window->link);
-
-  struct wm_seat *seat = wm_seat_find_or_create(window->surface->server, WM_DEFAULT_SEAT);
-
-  wlr_seat_keyboard_notify_enter(
-    seat->seat,
-    surface->surface,
-    NULL, 0, NULL
-  );
-}
-
 void handle_unmap(struct wl_listener *listener, void *data) {
   (void)data;
 
