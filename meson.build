@@ -17,8 +17,10 @@ executable('boxy',
   'src/wm_pointer.c',
   'src/wm_seat.c',
   'src/wm_server.c',
+  'src/wm_shell_xdg.c',
+  'src/wm_shell_xdg_v6.c',
   'src/wm_surface.c',
-   'src/wm_window.c',
+  'src/wm_window.c',
   include_directories: include_directories,
   dependencies: [wlroots, wayland, xkbcommon]
 )

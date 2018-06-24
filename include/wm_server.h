@@ -3,9 +3,9 @@
 
 #include <wayland-server.h>
 
-#define WM_DEFAULT_SEAT "seat0"
-
 struct wm_server {
+  const char* socket;
+
   struct wl_display *wl_display;
   struct wl_event_loop *wl_event_loop;
 
@@ -14,8 +14,7 @@ struct wm_server {
   struct wlr_compositor *compositor;
   struct wlr_output_layout *layout;
   struct wlr_xwayland *xwayland;
-  struct wlr_xdg_shell_v6 *xdg_shell_v6;
-  struct wlr_xdg_shell *xdg_shell;
+
   struct wlr_xcursor_manager *xcursor_manager;
   struct wlr_xdg_output_manager* xdg_output_manager;
   struct wlr_data_device_manager *data_device_manager;
@@ -23,15 +22,13 @@ struct wm_server {
   struct wlr_server_decoration_manager *server_decoration_manager;
   struct wlr_linux_dmabuf *linux_dmabuf;
 
-  struct wl_listener xwayland_surface;
-  struct wl_listener xdg_shell_v6_surface;
-  struct wl_listener xdg_shell_surface;
   struct wl_listener new_input;
   struct wl_listener new_output;
-  struct wl_list windows;
+
   struct wl_list seats;
+  struct wl_list shells;
   struct wl_list outputs;
-  const char* socket;
+  struct wl_list windows;
 };
 
 struct wlr_input_device;
@@ -47,6 +44,7 @@ void wm_server_run(struct wm_server* server);
 struct wm_seat* wm_server_find_or_create_seat(struct wm_server* server,
   const char* seat_name);
 
-struct wm_window* wm_server_window_at_point(struct wm_server* server, int x, int y);
+struct wm_window* wm_server_window_at_point(struct wm_server* server,
+  int x, int y);
 
 #endif

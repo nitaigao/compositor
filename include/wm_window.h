@@ -33,8 +33,6 @@ struct wm_window {
   struct wl_list link;
 };
 
-void wm_window_focus(struct wm_window* window);
-
 struct wlr_box wm_window_geometry(struct wm_window* window);
 
 bool wm_window_intersects_point(struct wm_window* window, int x, int y);

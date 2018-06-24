@@ -3,6 +3,7 @@
 
 #include <wayland-server.h>
 
+#define WM_DEFAULT_SEAT "seat0"
 #define WM_SEAT_NAME_SIZE 256
 
 struct wm_seat {
