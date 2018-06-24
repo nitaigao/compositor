@@ -3,8 +3,6 @@
 
 #include <wayland-server.h>
 
-#define WM_DEFAULT_SEAT "seat0"
-
 struct wm_server {
   struct wl_display *wl_display;
   struct wl_event_loop *wl_event_loop;
