@@ -52,7 +52,7 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
   const xkb_keysym_t *syms;
   int nsyms = xkb_state_key_get_syms(state, keycode, &syms);
 
-  if (event->state == 1) {
+  if (event->state == WLR_KEY_PRESSED) {
     for (int i = 0; i < nsyms; i++) {
       xkb_keysym_t sym = syms[i];
 
@@ -63,7 +63,7 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
     }
   }
 
-  if (event->state == 0) {
+  if (event->state == WLR_KEY_RELEASED) {
     for (int i = 0; i < nsyms; i++) {
       xkb_keysym_t sym = syms[i];
       if (sym == XKB_KEY_BackSpace) {
