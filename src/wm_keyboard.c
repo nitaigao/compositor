@@ -27,40 +27,41 @@ void exec_command(const char* shell_cmd) {
   }
 }
 
+static bool mod_state(const char* mod_name, struct xkb_keymap* keymap, struct xkb_state* state) {
+  xkb_mod_index_t index = xkb_keymap_mod_get_index(keymap, mod_name);
+
+  int active = xkb_state_mod_index_is_active(state,
+    index, XKB_STATE_MODS_DEPRESSED);
+
+  return active;
+}
+
 void wm_keyboard_key_event(struct wm_keyboard *keyboard,
   struct wlr_event_keyboard_key *event) {
 
   struct xkb_state* state = keyboard->device->keyboard->xkb_state;
   struct xkb_keymap* keymap = keyboard->device->keyboard->keymap;
 
-  xkb_mod_index_t super_index = xkb_keymap_mod_get_index(
-    keymap, XKB_MOD_NAME_LOGO);
-
-  int super = xkb_state_mod_index_is_active(state,
-    super_index, XKB_STATE_MODS_DEPRESSED);
-
-  xkb_mod_index_t shift_index = xkb_keymap_mod_get_index(
-    keymap, XKB_MOD_NAME_SHIFT);
-
-  int shift = xkb_state_mod_index_is_active(state,
-    shift_index, XKB_STATE_MODS_DEPRESSED);
-
-  xkb_mod_index_t ctrl_index = xkb_keymap_mod_get_index(
-    keymap, XKB_MOD_NAME_CTRL);
-
-  int ctrl = xkb_state_mod_index_is_active(state,
-    ctrl_index, XKB_STATE_MODS_DEPRESSED);
-
-  xkb_mod_index_t alt_index = xkb_keymap_mod_get_index(
-    keymap, XKB_MOD_NAME_ALT);
-
-  int alt = xkb_state_mod_index_is_active(state,
-    alt_index, XKB_STATE_MODS_DEPRESSED);
+  int super = mod_state(XKB_MOD_NAME_LOGO, keymap, state);
+  int shift = mod_state(XKB_MOD_NAME_SHIFT, keymap, state);
+  int ctrl = mod_state(XKB_MOD_NAME_CTRL, keymap, state);
+  int alt = mod_state(XKB_MOD_NAME_ALT, keymap, state);
 
   uint32_t keycode = event->keycode + 8;
 
   const xkb_keysym_t *syms;
   int nsyms = xkb_state_key_get_syms(state, keycode, &syms);
+
+  if (event->state == 1) {
+    for (int i = 0; i < nsyms; i++) {
+      xkb_keysym_t sym = syms[i];
+
+      if (super && sym == XKB_KEY_Up) {
+        wm_server_maximize_focused_window(keyboard->seat->server);
+        return;
+      }
+    }
+  }
 
   if (event->state == 0) {
     for (int i = 0; i < nsyms; i++) {
@@ -68,8 +69,10 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
       if (sym == XKB_KEY_BackSpace) {
         if (ctrl && alt) {
           wl_display_terminate(keyboard->seat->server->wl_display);
+          return;
         }
       }
+
       if (sym == XKB_KEY_Return) {
         if (super && !shift) {
           exec_command("gnome-terminal");
@@ -78,22 +81,20 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
           exec_command("weston-terminal");
         }
       }
-      if (sym == XKB_KEY_F3) {
+
+      if (sym == XKB_KEY_F1) {
         exec_command("gnome-calendar");
       }
-      if (sym == XKB_KEY_F4) {
+
+      if (sym == XKB_KEY_F2) {
         exec_command("gnome-calculator");
       }
+
       if (sym == XKB_KEY_F5) {
         exec_command("chrome");
       }
-      if (sym == XKB_KEY_F6) {
-        exec_command("weston-simple-shm");
-      }
     }
   }
-
-  wlr_seat_set_keyboard(keyboard->seat->seat, keyboard->device);
 
   wlr_seat_keyboard_notify_key(
     keyboard->seat->seat,

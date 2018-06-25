@@ -124,7 +124,7 @@ static void handle_request_set_cursor(struct wl_listener *listener, void *data) 
   struct wlr_surface *focused_surface =
 		event->seat_client->seat->pointer_state.focused_surface;
 
-  if (pointer->focused_surface->surface != focused_surface) {
+  if (pointer->focused_surface && pointer->focused_surface->surface != focused_surface) {
     wm_pointer_set_default_cursor(pointer);
 		return;
   }

@@ -3,6 +3,9 @@
 
 #include <wayland-server.h>
 
+#define wl_list_first(head, pos, member) \
+  wl_container_of((head)->next, pos, link)
+
 struct wm_server {
   const char* socket;
 
@@ -46,5 +49,7 @@ struct wm_seat* wm_server_find_or_create_seat(struct wm_server* server,
 
 struct wm_window* wm_server_window_at_point(struct wm_server* server,
   int x, int y);
+
+void wm_server_maximize_focused_window(struct wm_server* server);
 
 #endif

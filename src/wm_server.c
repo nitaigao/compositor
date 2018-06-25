@@ -208,3 +208,11 @@ struct wm_window* wm_server_window_at_point(struct wm_server* server, int x, int
   }
   return NULL;
 }
+
+void wm_server_maximize_focused_window(struct wm_server* server) {
+  bool has_window = !wl_list_empty(&server->windows);
+  if (has_window) {
+    struct wm_window *window = wl_list_first(&server->windows, window, link);
+    wm_window_maximize(window, true);
+  }
+}
