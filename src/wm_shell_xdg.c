@@ -110,8 +110,6 @@ void wm_surface_xdg_toplevel_set_focused(struct wm_surface* this,
   struct wlr_xdg_surface* xdg_surface =
     wlr_xdg_surface_from_wlr_surface(this->surface);
 
-  // wlr_seat_pointer_clear_focus(seat->seat);
-
   if (focused) {
     wlr_seat_keyboard_notify_enter(
       seat->seat,

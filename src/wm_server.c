@@ -230,9 +230,8 @@ void wm_server_add_window(struct wm_server* server,
 
 void wm_server_remove_window(struct wm_server* server,
   struct wm_window* window, struct wm_seat* seat) {
-  // wm_server_switch_window(server, seat);
-  (void)seat;
-  (void)server;
+  wm_server_switch_window(server);
+  wm_server_commit_window_switch(server, seat);
   wl_list_remove(&window->link);
 }
 
