@@ -25,6 +25,7 @@ static void handle_map_v6(struct wl_listener *listener, void *data) {
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
   window->x = 50;
   window->y = 50;
+  window->name = xdg_surface_v6->toplevel->title;
   window->width = surface->surface->current->width;
   window->height = surface->surface->current->height;
   window->surface = surface;
@@ -33,15 +34,8 @@ static void handle_map_v6(struct wl_listener *listener, void *data) {
 
   surface->window = window;
 
-  wl_list_insert(&surface->server->windows, &window->link);
-
   struct wm_seat *seat = wm_seat_find_or_create(window->surface->server, WM_DEFAULT_SEAT);
-
-  wlr_seat_keyboard_notify_enter(
-    seat->seat,
-    surface->surface,
-    NULL, 0, NULL
-  );
+  wm_server_add_window(surface->server, window, seat);
 }
 
 static void handle_xdg_v6_commit(struct wl_listener *listener, void *data) {
@@ -110,6 +104,24 @@ void wm_surface_xdg_v6_constrained_set_size(struct wm_surface* this,
     constrained_width, constrained_height);
 }
 
+void wm_surface_xdg_v6_toplevel_set_focused(struct wm_surface* this,
+  struct wm_seat* seat, bool focused) {
+  struct wlr_xdg_surface_v6* xdg_surface_v6 =
+    wlr_xdg_surface_v6_from_wlr_surface(this->surface);
+
+  if (focused) {
+    wlr_seat_keyboard_notify_enter(
+      seat->seat,
+      xdg_surface_v6->surface,
+      NULL, 0, NULL
+    );
+  }
+
+  if (xdg_surface_v6->role == WLR_XDG_SURFACE_V6_ROLE_TOPLEVEL) {
+    wlr_xdg_toplevel_v6_set_activated(xdg_surface_v6, focused);
+  }
+}
+
 struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
@@ -118,6 +130,7 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->toplevel_set_size = wm_surface_xdg_v6_toplevel_set_size;
   wm_surface->toplevel_set_maximized = wm_surface_xdg_toplevel_v6_set_maximized;
   wm_surface->toplevel_constrained_set_size = wm_surface_xdg_v6_constrained_set_size;
+  wm_surface->toplevel_set_focused = wm_surface_xdg_v6_toplevel_set_focused;
 
   if (xdg_surface_v6->role == WLR_XDG_SURFACE_V6_ROLE_TOPLEVEL) {
     wlr_xdg_toplevel_v6_set_activated(xdg_surface_v6, true);

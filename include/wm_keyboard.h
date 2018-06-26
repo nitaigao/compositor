@@ -17,6 +17,8 @@ struct wlr_event_keyboard_key;
 void wm_keyboard_destroy(struct wm_keyboard* keyboard);
 
 void wm_keyboard_key_event(struct wm_keyboard *keyboard,
-  struct wlr_event_keyboard_key *event);
+  struct wlr_event_keyboard_key* event);
+
+void wm_keyboard_modifiers_event(struct wm_keyboard *keyboard);
 
 #endif

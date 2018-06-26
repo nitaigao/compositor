@@ -27,38 +27,97 @@ void exec_command(const char* shell_cmd) {
   }
 }
 
+static bool mod_state(const char* mod_name, struct xkb_keymap* keymap, struct xkb_state* state) {
+  xkb_mod_index_t index = xkb_keymap_mod_get_index(keymap, mod_name);
+
+  int active = xkb_state_mod_index_is_active(state,
+    index, XKB_STATE_MODS_DEPRESSED);
+
+  return active;
+}
+
+void wm_keyboard_modifiers_event(struct wm_keyboard *keyboard) {
+  wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat,
+    &keyboard->device->keyboard->modifiers);
+
+  struct xkb_state* state = keyboard->device->keyboard->xkb_state;
+  struct xkb_keymap* keymap = keyboard->device->keyboard->keymap;
+
+  int super = mod_state(XKB_MOD_NAME_LOGO, keymap, state);
+  int alt = mod_state(XKB_MOD_NAME_ALT, keymap, state);
+
+  if (!super && !alt) {
+    wm_server_commit_window_switch(keyboard->seat->server, keyboard->seat);
+  }
+}
+
 void wm_keyboard_key_event(struct wm_keyboard *keyboard,
   struct wlr_event_keyboard_key *event) {
-  if (event->state == 0) {
-    uint32_t keycode = event->keycode + 8;
-    const xkb_keysym_t *syms;
-    int nsyms = xkb_state_key_get_syms(keyboard->device->keyboard->xkb_state,
-      keycode, &syms);
 
+  struct xkb_state* state = keyboard->device->keyboard->xkb_state;
+  struct xkb_keymap* keymap = keyboard->device->keyboard->keymap;
+
+  int super = mod_state(XKB_MOD_NAME_LOGO, keymap, state);
+  int shift = mod_state(XKB_MOD_NAME_SHIFT, keymap, state);
+  int ctrl = mod_state(XKB_MOD_NAME_CTRL, keymap, state);
+  int alt = mod_state(XKB_MOD_NAME_ALT, keymap, state);
+
+  uint32_t keycode = event->keycode + 8;
+
+  const xkb_keysym_t *syms;
+  int nsyms = xkb_state_key_get_syms(state, keycode, &syms);
+
+  if (event->state == WLR_KEY_PRESSED) {
     for (int i = 0; i < nsyms; i++) {
       xkb_keysym_t sym = syms[i];
-      if (sym == XKB_KEY_F1) {
-        exec_command("weston-terminal");
+
+      if (super && sym == XKB_KEY_Up) {
+        wm_server_maximize_focused_window(keyboard->seat->server);
+        return;
       }
-      if (sym == XKB_KEY_F2) {
-        exec_command("gnome-terminal");
+
+      if (super && sym == XKB_KEY_k) {
+        wm_server_switch_window(keyboard->seat->server);
+        return;
       }
-      if (sym == XKB_KEY_F3) {
-        exec_command("gnome-calendar");
-      }
-      if (sym == XKB_KEY_F4) {
-        exec_command("gnome-calculator");
-      }
-      if (sym == XKB_KEY_F5) {
+
+      if (super && sym == XKB_KEY_b) {
         exec_command("chrome");
+        return;
       }
-      if (sym == XKB_KEY_F6) {
-        exec_command("weston-simple-shm");
+
+      if (super && sym == XKB_KEY_s) {
+        exec_command("slack-desktop");
+        return;
+      }
+
+      if (alt && sym == XKB_KEY_Tab) {
+        wm_server_switch_window(keyboard->seat->server);
+        return;
       }
     }
   }
 
-  wlr_seat_set_keyboard(keyboard->seat->seat, keyboard->device);
+  if (event->state == WLR_KEY_RELEASED) {
+    for (int i = 0; i < nsyms; i++) {
+      xkb_keysym_t sym = syms[i];
+      if (sym == XKB_KEY_BackSpace) {
+        if (ctrl && alt) {
+          wl_display_terminate(keyboard->seat->server->wl_display);
+          return;
+        }
+      }
+
+      if (sym == XKB_KEY_Return) {
+        if (super && !shift) {
+          exec_command("gnome-terminal");
+        }
+        if (super && shift) {
+          exec_command("weston-terminal");
+        }
+      }
+    }
+  }
 
   wlr_seat_keyboard_notify_key(
     keyboard->seat->seat,

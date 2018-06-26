@@ -4,6 +4,7 @@
 #include <wayland-server.h>
 
 struct wlr_surface;
+struct wm_seat;
 
 typedef void (*wm_surface_render_handler)(struct wlr_surface *surface,
   int sx, int sy, void *data);
@@ -30,6 +31,9 @@ struct wm_surface {
 
   void (*toplevel_constrained_set_size)(struct wm_surface* this,
     int width, int height);
+
+  void (*toplevel_set_focused)(struct wm_surface* this,
+    struct wm_seat* seat, bool focused);
 };
 
 void handle_move(struct wl_listener *listener, void *data);
