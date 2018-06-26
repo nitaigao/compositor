@@ -44,7 +44,9 @@ void wm_keyboard_modifiers_event(struct wm_keyboard *keyboard) {
   struct xkb_keymap* keymap = keyboard->device->keyboard->keymap;
 
   int super = mod_state(XKB_MOD_NAME_LOGO, keymap, state);
-  if (!super) {
+  int alt = mod_state(XKB_MOD_NAME_ALT, keymap, state);
+  
+  if (!super && !alt) {
     wm_server_commit_window_switch(keyboard->seat->server, keyboard->seat);
   }
 }
