@@ -45,7 +45,7 @@ void wm_keyboard_modifiers_event(struct wm_keyboard *keyboard) {
 
   int super = mod_state(XKB_MOD_NAME_LOGO, keymap, state);
   int alt = mod_state(XKB_MOD_NAME_ALT, keymap, state);
-  
+
   if (!super && !alt) {
     wm_server_commit_window_switch(keyboard->seat->server, keyboard->seat);
   }
@@ -81,6 +81,16 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
         return;
       }
 
+      if (super && sym == XKB_KEY_b) {
+        exec_command("chrome");
+        return;
+      }
+
+      if (super && sym == XKB_KEY_s) {
+        exec_command("slack-desktop");
+        return;
+      }
+
       if (alt && sym == XKB_KEY_Tab) {
         wm_server_switch_window(keyboard->seat->server);
         return;
@@ -105,18 +115,6 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
         if (super && shift) {
           exec_command("weston-terminal");
         }
-      }
-
-      if (sym == XKB_KEY_F1) {
-        exec_command("gnome-calendar");
-      }
-
-      if (sym == XKB_KEY_F2) {
-        exec_command("gnome-calculator");
-      }
-
-      if (sym == XKB_KEY_F5) {
-        exec_command("chrome");
       }
     }
   }
