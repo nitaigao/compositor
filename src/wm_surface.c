@@ -38,25 +38,19 @@ void handle_unmap(struct wl_listener *listener, void *data) {
 
   struct wm_surface *wm_surface = wl_container_of(listener, wm_surface, unmap);
 
-  wl_list_remove(&wm_surface->window->link);
   wl_list_remove(&wm_surface->unmap.link);
   wl_list_remove(&wm_surface->map.link);
 
   int list_length = wl_list_length(&wm_surface->server->windows);
 
   if (list_length > 0) {
-    struct wm_window *window;
-    wl_list_for_each(window, &wm_surface->server->windows, link) {
-      break;
-    }
+    struct wm_window *window = wl_list_first(&wm_surface->server->windows,
+      window, link);
 
-    struct wm_seat *seat = wm_seat_find_or_create(window->surface->server, WM_DEFAULT_SEAT);
+    struct wm_seat *seat = wm_seat_find_or_create(window->surface->server,
+      WM_DEFAULT_SEAT);
 
-    wlr_seat_keyboard_notify_enter(
-      seat->seat,
-      window->surface->surface,
-      NULL, 0, NULL
-    );
+    wm_server_remove_window(window->surface->server, window, seat);
   }
 
   free(wm_surface->window);

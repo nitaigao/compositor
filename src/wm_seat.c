@@ -30,7 +30,7 @@ void seat_destroy_notify(struct wl_listener *listener, void *data) {
 void keyboard_modifiers_notify(struct wl_listener *listener, void *data) {
   (void)data;
   struct wm_keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
-  wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat, &keyboard->device->keyboard->modifiers);
+  wm_keyboard_modifiers_event(keyboard);
 }
 
 void keyboard_key_notify(struct wl_listener *listener, void *data) {
@@ -49,9 +49,6 @@ static void handle_cursor_button(struct wl_listener *listener, void *data) {
 
   wlr_seat_pointer_notify_button(pointer->seat->seat, event->time_msec, event->button, event->state);
 }
-
-#define wl_list_first(head, pos, member) \
-  wl_container_of((head)->next, pos, link)
 
 static void handle_motion(struct wm_pointer *pointer, uint32_t time) {
   pointer->focused_surface = NULL;

@@ -99,7 +99,6 @@ void wm_server_connect_input(struct wm_server* server, struct wlr_input_device* 
   wlr_seat_set_capabilities(seat->seat, seat->seat->capabilities);
 }
 
-
 void wm_server_run(struct wm_server* server) {
   if (!wlr_backend_start(server->backend)) {
     fprintf(stderr, "Failed to start backend\n");
@@ -215,4 +214,74 @@ void wm_server_maximize_focused_window(struct wm_server* server) {
     struct wm_window *window = wl_list_first(&server->windows, window, link);
     wm_window_maximize(window, true);
   }
+}
+
+void wm_server_add_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat) {
+
+  struct wm_window *old_window;
+  wl_list_for_each(old_window, &server->windows, link) {
+    old_window->surface->toplevel_set_focused(old_window->surface, seat, false);
+  }
+
+  wl_list_insert(&server->windows, &window->link);
+  window->surface->toplevel_set_focused(window->surface, seat, true);
+}
+
+void wm_server_remove_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat) {
+  // wm_server_switch_window(server, seat);
+  (void)seat;
+  (void)server;
+  wl_list_remove(&window->link);
+}
+
+void wm_server_switch_window(struct wm_server* server) {
+  bool has_windows = !wl_list_empty(&server->windows);
+  if (!has_windows) {
+    return;
+  }
+
+  int window_count = wl_list_length(&server->windows);
+
+  if (window_count < 2) {
+    return;
+  }
+
+  server->pending_focus_index++;
+
+  if (server->pending_focus_index == window_count) {
+    server->pending_focus_index = 0;
+  }
+
+  int i = 0;
+  struct wm_window *window;
+  wl_list_for_each(window, &server->windows, link) {
+    if (i++ == server->pending_focus_index) {
+      printf("Focus switch %s\n", window->name);
+      break;
+    }
+  }
+}
+
+void wm_server_commit_window_switch(struct wm_server* server,
+  struct wm_seat* seat) {
+  struct wm_window *window;
+
+  wl_list_for_each(window, &seat->server->windows, link) {
+    window->surface->toplevel_set_focused(window->surface, seat, false);
+  }
+
+  int i = 0;
+  struct wm_window *tmp;
+  wl_list_for_each_safe(window, tmp, &seat->server->windows, link) {
+    if (i++ == server->pending_focus_index) {
+      wl_list_remove(&window->link);
+      wl_list_insert(&server->windows, &window->link);
+      window->surface->toplevel_set_focused(window->surface, seat, true);
+      break;
+    }
+  }
+
+  server->pending_focus_index = 0;
 }

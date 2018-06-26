@@ -23,6 +23,7 @@ void handle_xdg_map(struct wl_listener *listener, void *data) {
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
   window->x = 50;
   window->y = 50;
+  window->name = xdg_surface->toplevel->title;
   window->width = surface->surface->current->width;
   window->height = surface->surface->current->height;
   window->surface = surface;
@@ -31,15 +32,8 @@ void handle_xdg_map(struct wl_listener *listener, void *data) {
 
   surface->window = window;
 
-  wl_list_insert(&surface->server->windows, &window->link);
-
   struct wm_seat *seat = wm_seat_find_or_create(window->surface->server, WM_DEFAULT_SEAT);
-
-  wlr_seat_keyboard_notify_enter(
-    seat->seat,
-    surface->surface,
-    NULL, 0, NULL
-  );
+  wm_server_add_window(surface->server, window, seat);
 }
 
 static void handle_xdg_commit(struct wl_listener *listener, void *data) {
@@ -111,6 +105,26 @@ void wm_surface_xdg_constrained_set_size(struct wm_surface* this,
     constrained_width, constrained_height);
 }
 
+void wm_surface_xdg_toplevel_set_focused(struct wm_surface* this,
+  struct wm_seat* seat, bool focused) {
+  struct wlr_xdg_surface* xdg_surface =
+    wlr_xdg_surface_from_wlr_surface(this->surface);
+
+  // wlr_seat_pointer_clear_focus(seat->seat);
+
+  if (focused) {
+    wlr_seat_keyboard_notify_enter(
+      seat->seat,
+      xdg_surface->surface,
+      NULL, 0, NULL
+    );
+  }
+
+  if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
+    wlr_xdg_toplevel_set_activated(xdg_surface, focused);
+  }
+}
+
 struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   struct wm_server* server) {
 
@@ -121,6 +135,7 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   wm_surface->toplevel_set_size = wm_surface_xdg_toplevel_set_size;
   wm_surface->toplevel_set_maximized = wm_surface_xdg_toplevel_set_maximized;
   wm_surface->toplevel_constrained_set_size = wm_surface_xdg_constrained_set_size;
+  wm_surface->toplevel_set_focused = wm_surface_xdg_toplevel_set_focused;
 
   if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
     wlr_xdg_toplevel_set_activated(xdg_surface, true);
@@ -133,13 +148,16 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   wl_signal_add(&xdg_surface->events.unmap, &wm_surface->unmap);
 
   wm_surface->move.notify = handle_move;
-  wl_signal_add(&xdg_surface->toplevel->events.request_move, &wm_surface->move);
+  wl_signal_add(&xdg_surface->toplevel->events.request_move,
+    &wm_surface->move);
 
   wm_surface->resize.notify = handle_resize;
-	wl_signal_add(&xdg_surface->toplevel->events.request_resize, &wm_surface->resize);
+	wl_signal_add(&xdg_surface->toplevel->events.request_resize,
+    &wm_surface->resize);
 
   wm_surface->maximize.notify = handle_xdg_maximize;
-	wl_signal_add(&xdg_surface->toplevel->events.request_maximize, &wm_surface->maximize);
+	wl_signal_add(&xdg_surface->toplevel->events.request_maximize,
+    &wm_surface->maximize);
 
   wm_surface->commit.notify = handle_xdg_commit;
 	wl_signal_add(&xdg_surface->surface->events.commit, &wm_surface->commit);

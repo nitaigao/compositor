@@ -36,6 +36,19 @@ static bool mod_state(const char* mod_name, struct xkb_keymap* keymap, struct xk
   return active;
 }
 
+void wm_keyboard_modifiers_event(struct wm_keyboard *keyboard) {
+  wlr_seat_keyboard_notify_modifiers(keyboard->seat->seat,
+    &keyboard->device->keyboard->modifiers);
+
+  struct xkb_state* state = keyboard->device->keyboard->xkb_state;
+  struct xkb_keymap* keymap = keyboard->device->keyboard->keymap;
+
+  int super = mod_state(XKB_MOD_NAME_LOGO, keymap, state);
+  if (!super) {
+    wm_server_commit_window_switch(keyboard->seat->server, keyboard->seat);
+  }
+}
+
 void wm_keyboard_key_event(struct wm_keyboard *keyboard,
   struct wlr_event_keyboard_key *event) {
 
@@ -58,6 +71,16 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
 
       if (super && sym == XKB_KEY_Up) {
         wm_server_maximize_focused_window(keyboard->seat->server);
+        return;
+      }
+
+      if (super && sym == XKB_KEY_k) {
+        wm_server_switch_window(keyboard->seat->server);
+        return;
+      }
+
+      if (alt && sym == XKB_KEY_Tab) {
+        wm_server_switch_window(keyboard->seat->server);
         return;
       }
     }

@@ -6,6 +6,8 @@
 struct wm_pointer;
 
 struct wm_window {
+  const char* name;
+
   int x;
   int y;
 

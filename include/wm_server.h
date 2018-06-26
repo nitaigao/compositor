@@ -6,6 +6,9 @@
 #define wl_list_first(head, pos, member) \
   wl_container_of((head)->next, pos, link)
 
+#define wl_list_last(head, pos, member) \
+  wl_container_of((head)->prev, pos, link)
+
 struct wm_server {
   const char* socket;
 
@@ -32,6 +35,8 @@ struct wm_server {
   struct wl_list shells;
   struct wl_list outputs;
   struct wl_list windows;
+
+  int pending_focus_index;
 };
 
 struct wlr_input_device;
@@ -51,5 +56,16 @@ struct wm_window* wm_server_window_at_point(struct wm_server* server,
   int x, int y);
 
 void wm_server_maximize_focused_window(struct wm_server* server);
+
+void wm_server_switch_window(struct wm_server* server);
+
+void wm_server_commit_window_switch(struct wm_server* server,
+  struct wm_seat* seat);
+
+void wm_server_add_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat);
+
+void wm_server_remove_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat);
 
 #endif
