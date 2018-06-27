@@ -126,3 +126,60 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
     event->state
   );
 }
+
+static void keyboard_modifiers_notify(struct wl_listener *listener, void *data) {
+  (void)data;
+  struct wm_keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
+  wm_keyboard_modifiers_event(keyboard);
+}
+
+static void keyboard_key_notify(struct wl_listener *listener, void *data) {
+  struct wlr_event_keyboard_key *event = data;
+  struct wm_keyboard *keyboard = wl_container_of(listener, keyboard, key);
+  wm_keyboard_key_event(keyboard, event);
+}
+
+struct wm_keyboard* wm_keyboard_create(struct wlr_input_device* device,
+  struct wm_seat* seat) {
+  struct wm_keyboard *keyboard = calloc(1, sizeof(struct wm_keyboard));
+  keyboard->device = device;
+  keyboard->seat = seat;
+
+  wl_list_insert(&seat->keyboards, &keyboard->link);
+
+  int repeat_rate = 25;
+  int repeat_delay = 600;
+  wlr_keyboard_set_repeat_info(device->keyboard, repeat_rate, repeat_delay);
+
+  wl_signal_add(&device->keyboard->events.key, &keyboard->key);
+  keyboard->key.notify = keyboard_key_notify;
+
+  wl_signal_add(&device->keyboard->events.modifiers, &keyboard->modifiers);
+  keyboard->modifiers.notify = keyboard_modifiers_notify;
+
+  wlr_seat_set_keyboard(seat->seat, device);
+
+  struct xkb_rule_names rules = { 0 };
+  rules.rules = getenv("XKB_DEFAULT_RULES");
+  rules.model = getenv("XKB_DEFAULT_MODEL");
+  rules.layout = getenv("XKB_DEFAULT_LAYOUT");
+  rules.variant = getenv("XKB_DEFAULT_VARIANT");
+  rules.options = getenv("XKB_DEFAULT_OPTIONS");
+
+  struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
+
+  if (!context) {
+    wlr_log(L_ERROR, "Failed to create XKB context");
+    exit(1);
+  }
+
+  struct xkb_keymap *keymap = xkb_map_new_from_names(context,
+    &rules, XKB_KEYMAP_COMPILE_NO_FLAGS);
+
+  wlr_keyboard_set_keymap(device->keyboard, keymap);
+
+  xkb_context_unref(context);
+  xkb_keymap_unref(keymap);
+
+  return keyboard;
+}

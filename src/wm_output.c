@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <wlr/backend.h>
+#include <wlr/types/wlr_box.h>
 #include <wayland-server.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/render/wlr_renderer.h>
@@ -161,7 +162,14 @@ void wm_output_render(struct wm_output* output) {
       continue;
     }
 
-    window->surface->render(window->surface, render_surface, &render_data);
+    struct wlr_box window_geometry = wm_window_geometry(window);
+
+    bool within_output = wlr_output_layout_intersects(server->layout,
+      wlr_output, &window_geometry);
+
+    if (within_output) {
+      window->surface->render(window->surface, render_surface, &render_data);
+    }
   }
 
   wl_list_for_each_reverse(window, &server->windows, link) {
