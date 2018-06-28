@@ -91,6 +91,11 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
         return;
       }
 
+      if (sym == XKB_KEY_F1) {
+        exec_command("epiphany");
+        return;
+      }
+
       if (alt && sym == XKB_KEY_Tab) {
         wm_server_switch_window(keyboard->seat->server);
         return;

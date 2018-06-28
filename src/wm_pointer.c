@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
+#include <wlr/types/wlr_xdg_shell.h>
+
 
 #include "wm_seat.h"
 #include "wm_server.h"
@@ -33,6 +35,8 @@ static void handle_cursor_button(struct wl_listener *listener, void *data) {
 
   if (event->state == WLR_BUTTON_RELEASED) {
     wm_pointer_set_mode(pointer, WM_POINTER_MODE_FREE);
+    wm_server_focus_window_under_point(pointer->server, pointer->seat,
+      pointer->cursor->x, pointer->cursor->y);
   }
 
   wlr_seat_pointer_notify_button(pointer->seat->seat, event->time_msec, event->button, event->state);
@@ -103,8 +107,9 @@ void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time) {
     double local_y = pointer->cursor->y - window->y;
 
     double sx, sy;
-    struct wlr_surface *surface = wlr_surface_surface_at(
-      window->surface->surface, local_x, local_y, &sx, &sy);
+
+    struct wlr_surface *surface = window->surface->wlr_surface_at(
+      window->surface, local_x, local_y, &sx, &sy);
 
     if (surface) {
       wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);

@@ -50,8 +50,11 @@ void handle_unmap(struct wl_listener *listener, void *data) {
     struct wm_seat *seat = wm_seat_find_or_create(window->surface->server,
       WM_DEFAULT_SEAT);
 
-    wm_server_remove_window(window->surface->server, window, seat);
+    wm_server_switch_window(window->surface->server);
+    wm_server_commit_window_switch(window->surface->server, seat);
   }
+
+  wm_server_remove_window(wm_surface->window);
 
   free(wm_surface->window);
   free(wm_surface);

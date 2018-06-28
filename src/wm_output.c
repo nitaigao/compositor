@@ -144,7 +144,7 @@ void wm_output_render(struct wm_output* output) {
   wlr_output_make_current(wlr_output, NULL);
   wlr_renderer_begin(renderer, wlr_output->width, wlr_output->height);
 
-  float color[4] = { 1.0, 0, 0, 1.0 };
+  float color[4] = { 0.0, 0, 0, 1.0 };
   wlr_renderer_clear(renderer, color);
 
   struct timespec now;
@@ -173,7 +173,7 @@ void wm_output_render(struct wm_output* output) {
   }
 
   wl_list_for_each_reverse(window, &server->windows, link) {
-    wlr_surface_for_each_surface(window->surface->surface, send_frame_done, &now);
+    window->surface->frame_done(window->surface, send_frame_done, &now);
   }
 
   wlr_output_swap_buffers(wlr_output, NULL, NULL);
