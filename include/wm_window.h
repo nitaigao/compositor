@@ -6,6 +6,8 @@
 struct wm_pointer;
 
 struct wm_window {
+  const char* name;
+
   int x;
   int y;
 
@@ -32,8 +34,6 @@ struct wm_window {
   struct wm_surface *surface;
   struct wl_list link;
 };
-
-void wm_window_focus(struct wm_window* window);
 
 struct wlr_box wm_window_geometry(struct wm_window* window);
 

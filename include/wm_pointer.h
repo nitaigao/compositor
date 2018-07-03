@@ -39,4 +39,9 @@ void wm_pointer_set_default_cursor(struct wm_pointer* pointer);
 
 void wm_pointer_set_resize_edge(struct wm_pointer* pointer, int resize_edge);
 
+void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time);
+
+struct wm_pointer* wm_pointer_create(struct wm_server* server,
+  struct wm_seat* seat);
+
 #endif

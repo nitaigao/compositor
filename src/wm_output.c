@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <wlr/backend.h>
+#include <wlr/types/wlr_box.h>
 #include <wayland-server.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/render/wlr_renderer.h>
@@ -148,7 +149,7 @@ void wm_output_render(struct wm_output* output) {
   wlr_output_make_current(wlr_output, NULL);
   wlr_renderer_begin(renderer, wlr_output->width, wlr_output->height);
 
-  float color[4] = { 1.0, 0, 0, 1.0 };
+  float color[4] = { 0.0, 0, 0, 1.0 };
   wlr_renderer_clear(renderer, color);
 
   struct timespec now;
@@ -156,18 +157,23 @@ void wm_output_render(struct wm_output* output) {
 
   struct wm_window *window;
   wl_list_for_each_reverse(window, &server->windows, link) {
-      struct render_data render_data = {
-        .output = output,
-        .window = window
-      };
+    struct render_data render_data = {
+      .output = output,
+      .window = window
+    };
 
-    if (window->surface->type == WM_SURFACE_TYPE_XDG) {
-      wlr_xdg_surface_for_each_surface(window->surface->xdg_surface,
-        render_surface, &render_data);
+    if (!window->surface->render) {
+      printf("Surface has no render function\n");
+      continue;
     }
-    if (window->surface->type == WM_SURFACE_TYPE_XDG_V6) {
-      wlr_xdg_surface_v6_for_each_surface(window->surface->xdg_surface_v6,
-        render_surface, &render_data);
+
+    struct wlr_box window_geometry = wm_window_geometry(window);
+
+    bool within_output = wlr_output_layout_intersects(server->layout,
+      wlr_output, &window_geometry);
+
+    if (within_output) {
+      window->surface->render(window->surface, render_surface, &render_data);
     }
     if (window->surface->type == WM_SURFACE_TYPE_X11) {
       render_surface(window->surface->surface, window->x, window->y, &render_data);
@@ -175,7 +181,7 @@ void wm_output_render(struct wm_output* output) {
   }
 
   wl_list_for_each_reverse(window, &server->windows, link) {
-    wlr_surface_for_each_surface(window->surface->surface, send_frame_done, &now);
+    window->surface->frame_done(window->surface, send_frame_done, &now);
   }
 
   wlr_output_swap_buffers(wlr_output, NULL, NULL);

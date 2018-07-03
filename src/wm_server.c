@@ -35,11 +35,11 @@
 #include "wm_output.h"
 #include "wm_surface.h"
 #include "wm_keyboard.h"
+#include "wm_shell.h"
+#include "wm_shell_xdg.h"
+#include "wm_shell_xdg_v6.h"
 
 void wm_server_destroy(struct wm_server* server) {
-  // wlr_xwayland_destroy(server->xwayland);
-  // server->xwayland = NULL;
-
   wlr_data_device_manager_destroy(server->data_device_manager);
   server->data_device_manager = NULL;
 
@@ -69,21 +69,6 @@ void wm_server_destroy(struct wm_server* server) {
 
 void wm_server_set_cursors(struct wm_server* server) {
   wlr_xcursor_manager_load(server->xcursor_manager, 1);
-  // wlr_xcursor_manager_load(server->xcursor_manager, 2);
-
-  // struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(server->xcursor_manager, DEFAULT_CURSOR, 1);
-  // if (xcursor != NULL) {
-  //   struct wlr_xcursor_image *image = xcursor->images[0];
-  //   wlr_xwayland_set_cursor(
-  //     server->xwayland,
-  //     image->buffer,
-  //     image->width * 4,
-  //     image->width,
-  //     image->height,
-  //     image->hotspot_x,
-  //     image->hotspot_y
-  //   );
-  // }
 }
 
 void wm_server_connect_output(struct wm_server* server, struct wlr_output* wlr_output) {
@@ -114,7 +99,6 @@ void wm_server_connect_input(struct wm_server* server, struct wlr_input_device* 
   wlr_seat_set_capabilities(seat->seat, seat->seat->capabilities);
 }
 
-
 void wm_server_run(struct wm_server* server) {
   if (!wlr_backend_start(server->backend)) {
     fprintf(stderr, "Failed to start backend\n");
@@ -138,50 +122,13 @@ static void new_output_notify(struct wl_listener *listener, void *data) {
   wm_server_connect_output(server, data);
 }
 
-void handle_xdg_shell_surface(struct wl_listener *listener, void *data) {
-  struct wlr_xdg_surface *xdg_surface = data;
-  struct wm_server *server = wl_container_of(listener, server, xdg_shell_surface);
-
-  if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_POPUP) {
-    printf("Popup requested, dropping\n");
-    return;
-  }
-
-  printf("New XDG Surface: Title=%s\n", xdg_surface->toplevel->title);
-  wlr_xdg_surface_ping(xdg_surface);
-  wm_surface_xdg_create(xdg_surface, server);
-}
-
-void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
-  struct wlr_xdg_surface_v6 *xdg_surface = data;
-  struct wm_server *server = wl_container_of(listener, server, xdg_shell_v6_surface);
-
-  if (xdg_surface->role == WLR_XDG_SURFACE_V6_ROLE_POPUP) {
-    printf("Popup requested, dropping\n");
-    return;
-  }
-
-  printf("New XDG V6 Surface: Title=%s\n", xdg_surface->toplevel->title);
-  wlr_xdg_surface_v6_ping(xdg_surface);
-  wm_surface_xdg_v6_create(xdg_surface, server);
-}
-
-void handle_xwayland_surface(struct wl_listener *listener, void *data) {
-  struct wlr_xwayland_surface *xwayland_surface = data;
-  struct wm_server *server = wl_container_of(listener,
-    server, xwayland_surface);
-
-  printf("New XWayland Surface\n");
-  wlr_xwayland_surface_ping(xwayland_surface);
-  wm_surface_xwayland_create(xwayland_surface, server);
-}
-
 struct wm_server* wm_server_create() {
   struct wm_server* server = calloc(1, sizeof(struct wm_server));
 
-  wl_list_init(&server->windows);
   wl_list_init(&server->outputs);
   wl_list_init(&server->seats);
+  wl_list_init(&server->shells);
+  wl_list_init(&server->windows);
 
   server->wl_display = wl_display_create();
 
@@ -209,17 +156,14 @@ struct wm_server* wm_server_create() {
   server->xdg_output_manager = wlr_xdg_output_manager_create(server->wl_display, server->layout);
   server->compositor = wlr_compositor_create(server->wl_display, server->renderer);
 
-  server->xdg_shell = wlr_xdg_shell_create(server->wl_display);
-  wl_signal_add(&server->xdg_shell->events.new_surface, &server->xdg_shell_surface);
-  server->xdg_shell_surface.notify = handle_xdg_shell_surface;
+  struct wm_shell* xdg_shell = wm_shell_xdg_create(server);
+  wl_list_insert(&server->shells, &xdg_shell->link);
 
-  server->xdg_shell_v6 = wlr_xdg_shell_v6_create(server->wl_display);
-  wl_signal_add(&server->xdg_shell_v6->events.new_surface, &server->xdg_shell_v6_surface);
-  server->xdg_shell_v6_surface.notify = handle_xdg_shell_v6_surface;
+  struct wm_shell* xdg_shell_v6 = wm_shell_xdg_v6_create(server);
+  wl_list_insert(&server->shells, &xdg_shell_v6->link);
 
-  server->xwayland = wlr_xwayland_create(server->wl_display, server->compositor, true);
-  wl_signal_add(&server->xwayland->events.new_surface, &server->xwayland_surface);
-  server->xwayland_surface.notify = handle_xwayland_surface;
+  struct wm_shell* xwayland_shell = wm_shell_xwayland_create(server);
+  wl_list_insert(&server->shells, &xwayland_shell->link);
 
   server->xcursor_manager = wlr_xcursor_manager_create("default", 24);
 
@@ -265,4 +209,95 @@ struct wm_window* wm_server_window_at_point(struct wm_server* server, int x, int
     }
   }
   return NULL;
+}
+
+void wm_server_maximize_focused_window(struct wm_server* server) {
+  bool has_window = !wl_list_empty(&server->windows);
+  if (has_window) {
+    struct wm_window *window = wl_list_first(&server->windows, window, link);
+    wm_window_maximize(window, true);
+  }
+}
+
+void wm_server_add_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat) {
+
+  struct wm_window *old_window;
+  wl_list_for_each(old_window, &server->windows, link) {
+    old_window->surface->toplevel_set_focused(old_window->surface, seat, false);
+  }
+
+  wl_list_insert(&server->windows, &window->link);
+  window->surface->toplevel_set_focused(window->surface, seat, true);
+}
+
+void wm_server_switch_window(struct wm_server* server) {
+  bool has_windows = !wl_list_empty(&server->windows);
+  if (!has_windows) {
+    return;
+  }
+
+  int window_count = wl_list_length(&server->windows);
+
+  if (window_count < 2) {
+    return;
+  }
+
+  server->pending_focus_index++;
+
+  if (server->pending_focus_index == window_count) {
+    server->pending_focus_index = 0;
+  }
+
+  int i = 0;
+  struct wm_window *window;
+  wl_list_for_each(window, &server->windows, link) {
+    if (i++ == server->pending_focus_index) {
+      printf("Focus switch %s\n", window->name);
+      break;
+    }
+  }
+}
+
+static void wm_server_focus_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat) {
+
+  struct wm_window* old_window;
+  wl_list_for_each(old_window, &server->windows, link) {
+    window->surface->toplevel_set_focused(window->surface, seat, false);
+  }
+
+  wl_list_remove(&window->link);
+  wl_list_insert(&server->windows, &window->link);
+  window->surface->toplevel_set_focused(window->surface, seat, true);
+}
+
+void wm_server_commit_window_switch(struct wm_server* server,
+  struct wm_seat* seat) {
+  int i = 0;
+  struct wm_window *window, *tmp;
+  wl_list_for_each_safe(window, tmp, &seat->server->windows, link) {
+    if (i++ == server->pending_focus_index) {
+      wm_server_focus_window(server, window, seat);
+      break;
+    }
+  }
+  server->pending_focus_index = 0;
+}
+
+void wm_server_focus_window_under_point(struct wm_server* server,
+  struct wm_seat* seat, double x, double y) {
+  struct wm_window *window, *tmp;
+  wl_list_for_each_safe(window, tmp, &seat->server->windows, link) {
+    struct wlr_box geometry = wm_window_geometry(window);
+    bool under_mouse = wlr_box_contains_point(&geometry, x, y);
+    if (under_mouse) {
+      wm_server_focus_window(server, window, seat);
+      break;
+    }
+  }
+}
+
+void wm_server_remove_window(struct wm_window* window) {
+  wl_list_remove(&window->link);
 }
