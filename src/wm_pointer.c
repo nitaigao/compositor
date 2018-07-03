@@ -59,8 +59,19 @@ static void handle_cursor_motion_absolute(struct wl_listener *listener, void *da
 static void handle_axis(struct wl_listener *listener, void *data) {
   struct wm_pointer *pointer = wl_container_of(listener, pointer, axis);
 	struct wlr_event_pointer_axis *event = data;
+
+  float delta = event->delta;
+  double delta_discrete = event->delta;
+
+  bool natural_scrolling = true; 
+
+  if (natural_scrolling) {
+    delta = -delta;
+    delta_discrete = -delta_discrete;
+  }
+
   wlr_seat_pointer_notify_axis(pointer->seat->seat, event->time_msec,
-    event->orientation, event->delta, event->delta_discrete, event->source);
+    event->orientation, delta, delta_discrete, event->source);
 }
 
 void wm_pointer_set_mode(struct wm_pointer* pointer, int mode) {
