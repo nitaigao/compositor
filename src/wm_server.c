@@ -228,13 +228,6 @@ void wm_server_add_window(struct wm_server* server,
   window->surface->toplevel_set_focused(window->surface, seat, true);
 }
 
-void wm_server_remove_window(struct wm_server* server,
-  struct wm_window* window, struct wm_seat* seat) {
-  wm_server_switch_window(server);
-  wm_server_commit_window_switch(server, seat);
-  wl_list_remove(&window->link);
-}
-
 void wm_server_switch_window(struct wm_server* server) {
   bool has_windows = !wl_list_empty(&server->windows);
   if (!has_windows) {
@@ -263,24 +256,45 @@ void wm_server_switch_window(struct wm_server* server) {
   }
 }
 
-void wm_server_commit_window_switch(struct wm_server* server,
-  struct wm_seat* seat) {
-  struct wm_window *window;
+static void wm_server_focus_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat) {
 
-  wl_list_for_each(window, &seat->server->windows, link) {
+  struct wm_window* old_window;
+  wl_list_for_each(old_window, &server->windows, link) {
     window->surface->toplevel_set_focused(window->surface, seat, false);
   }
 
+  wl_list_remove(&window->link);
+  wl_list_insert(&server->windows, &window->link);
+  window->surface->toplevel_set_focused(window->surface, seat, true);
+}
+
+void wm_server_commit_window_switch(struct wm_server* server,
+  struct wm_seat* seat) {
   int i = 0;
-  struct wm_window *tmp;
+  struct wm_window *window, *tmp;
   wl_list_for_each_safe(window, tmp, &seat->server->windows, link) {
     if (i++ == server->pending_focus_index) {
-      wl_list_remove(&window->link);
-      wl_list_insert(&server->windows, &window->link);
-      window->surface->toplevel_set_focused(window->surface, seat, true);
+      wm_server_focus_window(server, window, seat);
       break;
     }
   }
-
   server->pending_focus_index = 0;
+}
+
+void wm_server_focus_window_under_point(struct wm_server* server,
+  struct wm_seat* seat, double x, double y) {
+  struct wm_window *window, *tmp;
+  wl_list_for_each_safe(window, tmp, &seat->server->windows, link) {
+    struct wlr_box geometry = wm_window_geometry(window);
+    bool under_mouse = wlr_box_contains_point(&geometry, x, y);
+    if (under_mouse) {
+      wm_server_focus_window(server, window, seat);
+      break;
+    }
+  }
+}
+
+void wm_server_remove_window(struct wm_window* window) {
+  wl_list_remove(&window->link);
 }

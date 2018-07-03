@@ -65,7 +65,9 @@ void wm_server_commit_window_switch(struct wm_server* server,
 void wm_server_add_window(struct wm_server* server,
   struct wm_window* window, struct wm_seat* seat);
 
-void wm_server_remove_window(struct wm_server* server,
-  struct wm_window* window, struct wm_seat* seat);
+void wm_server_remove_window(struct wm_window* window);
+
+void wm_server_focus_window_under_point(struct wm_server* server,
+  struct wm_seat* seat, double x, double y);
 
 #endif

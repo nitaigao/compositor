@@ -38,8 +38,7 @@ void handle_xdg_map(struct wl_listener *listener, void *data) {
 
 static void handle_xdg_commit(struct wl_listener *listener, void *data) {
   (void)data;
-  struct wm_surface *surface =
-		wl_container_of(listener, surface, commit);
+  struct wm_surface *surface = wl_container_of(listener, surface, commit);
 
   struct wlr_xdg_surface* xdg_surface =
     wlr_xdg_surface_from_wlr_surface(surface->surface);
@@ -72,6 +71,20 @@ void wm_surface_xdg_render(struct wm_surface* this,
   struct wlr_xdg_surface* xdg_surface =
     wlr_xdg_surface_from_wlr_surface(this->surface);
   wlr_xdg_surface_for_each_surface(xdg_surface, render_surface, data);
+}
+
+void wm_surface_xdg_frame_done(struct wm_surface* this,
+  wm_surface_frame_done_handler send_frame_done,  struct timespec* now) {
+  struct wlr_xdg_popup *popup;
+
+  wlr_surface_for_each_surface(this->surface, send_frame_done, now);
+
+  struct wlr_xdg_surface* xdg_surface =
+    wlr_xdg_surface_from_wlr_surface(this->surface);
+
+  wl_list_for_each_reverse(popup, &xdg_surface->popups, link) {
+    wlr_surface_for_each_surface(popup->base->surface, send_frame_done, now);
+  }
 }
 
 void wm_surface_xdg_toplevel_set_size(struct wm_surface* this,
@@ -123,6 +136,15 @@ void wm_surface_xdg_toplevel_set_focused(struct wm_surface* this,
   }
 }
 
+struct wlr_surface* wm_surface_xdg_wlr_surface_at(struct wm_surface* this,
+		double sx, double sy, double *sub_x, double *sub_y) {
+  struct wlr_xdg_surface* xdg_surface = wlr_xdg_surface_from_wlr_surface(
+    this->surface);
+  struct wlr_surface *surface = wlr_xdg_surface_surface_at(
+    xdg_surface, sx, sy, sub_x, sub_y);
+  return surface;
+}
+
 struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   struct wm_server* server) {
 
@@ -130,10 +152,12 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   wm_surface->server = server;
   wm_surface->surface = xdg_surface->surface;
   wm_surface->render = wm_surface_xdg_render;
+  wm_surface->frame_done = wm_surface_xdg_frame_done;
   wm_surface->toplevel_set_size = wm_surface_xdg_toplevel_set_size;
   wm_surface->toplevel_set_maximized = wm_surface_xdg_toplevel_set_maximized;
   wm_surface->toplevel_constrained_set_size = wm_surface_xdg_constrained_set_size;
   wm_surface->toplevel_set_focused = wm_surface_xdg_toplevel_set_focused;
+  wm_surface->wlr_surface_at = wm_surface_xdg_wlr_surface_at;
 
   if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
     wlr_xdg_toplevel_set_activated(xdg_surface, true);

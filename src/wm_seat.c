@@ -42,11 +42,6 @@ void wm_seat_attach_pointing_device(struct wm_seat* seat,
     seat->pointer = wm_pointer_create(seat->server, seat);
   }
 
-  struct wm_output *output;
-  wl_list_for_each(output, &seat->server->outputs, link) {
-    wlr_cursor_map_to_output(seat->pointer->cursor, output->wlr_output);
-  }
-
   wlr_cursor_attach_input_device(seat->pointer->cursor, device);
 }
 
