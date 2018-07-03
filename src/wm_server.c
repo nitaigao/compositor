@@ -38,6 +38,7 @@
 #include "wm_shell.h"
 #include "wm_shell_xdg.h"
 #include "wm_shell_xdg_v6.h"
+#include "wm_shell_xwayland.h"
 
 void wm_server_destroy(struct wm_server* server) {
   wlr_data_device_manager_destroy(server->data_device_manager);

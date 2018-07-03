@@ -11,6 +11,7 @@
 #include <wlr/backend.h>
 #include <wlr/types/wlr_box.h>
 #include <wayland-server.h>
+#include <wlr/xwayland.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/render/wlr_renderer.h>
 #include <wlr/types/wlr_matrix.h>
@@ -73,8 +74,6 @@ struct wm_output* wm_output_create(struct wlr_output* wlr_output,
     wlr_output_set_scale(wlr_output, 2.0);
   }
 
-  setenv("GDK_SCALE", "2", true);
-
   wlr_xcursor_manager_load(server->xcursor_manager, wlr_output->scale);
 
   output->destroy.notify = output_destroy_notify;
@@ -107,10 +106,6 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
   struct wm_output* output = render_data->output;
 
   double scale = output->wlr_output->scale;
-
-  if (window->surface->type == WM_SURFACE_TYPE_X11) {
-    scale = 1;
-  }
 
   struct wlr_box box = {
     .x = (window->x + sx) * scale,
@@ -174,9 +169,6 @@ void wm_output_render(struct wm_output* output) {
 
     if (within_output) {
       window->surface->render(window->surface, render_surface, &render_data);
-    }
-    if (window->surface->type == WM_SURFACE_TYPE_X11) {
-      render_surface(window->surface->surface, window->x, window->y, &render_data);
     }
   }
 

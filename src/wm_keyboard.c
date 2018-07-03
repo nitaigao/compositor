@@ -92,7 +92,7 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
       }
 
       if (sym == XKB_KEY_F1) {
-        exec_command("chrome --force-device-scale-factor=2");
+        exec_command("chrome");
         return;
       }
 

@@ -7,8 +7,8 @@
 #include <wlr/backend.h>
 #include <wlr/xwayland.h>
 #include <wlr/backend/session.h>
-#include <wlr/types/wlr_wl_shell.h>
 #include <wlr/render/wlr_renderer.h>
+#include <wlr/types/wlr_wl_shell.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_idle.h>
@@ -63,7 +63,9 @@ void handle_unmap(struct wl_listener *listener, void *data) {
 void handle_move(struct wl_listener *listener, void *data) {
   struct wm_surface *surface = wl_container_of(listener, surface, move);
   struct wlr_wl_shell_surface_move_event *event = data;
-  struct wm_seat *seat = wm_seat_find_or_create(surface->server, event->seat->seat->name);
+  (void)event;
+
+  struct wm_seat *seat = surface->locate_seat(surface);
 
   if (seat->pointer && seat->pointer->mode != WM_POINTER_MODE_MOVE) {
     seat->pointer->offset_x = seat->pointer->cursor->x;

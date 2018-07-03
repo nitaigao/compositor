@@ -63,7 +63,7 @@ static void handle_axis(struct wl_listener *listener, void *data) {
   float delta = event->delta;
   double delta_discrete = event->delta;
 
-  bool natural_scrolling = true; 
+  bool natural_scrolling = true;
 
   if (natural_scrolling) {
     delta = -delta;

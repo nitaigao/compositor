@@ -145,6 +145,12 @@ struct wlr_surface* wm_surface_xdg_v6_wlr_surface_at(struct wm_surface* this,
   return surface;
 }
 
+struct wm_seat* wm_surface_xdg_v6_locate_seat(struct wm_surface* this) {
+  struct wm_seat* default_seat = wm_seat_find_or_create(this->server,
+    WM_DEFAULT_SEAT);
+  return default_seat;
+}
+
 struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
@@ -155,6 +161,7 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->toplevel_set_maximized = wm_surface_xdg_toplevel_v6_set_maximized;
   wm_surface->toplevel_constrained_set_size = wm_surface_xdg_v6_constrained_set_size;
   wm_surface->toplevel_set_focused = wm_surface_xdg_v6_toplevel_set_focused;
+  wm_surface->locate_seat = wm_surface_xdg_v6_locate_seat;
   wm_surface->wlr_surface_at = wm_surface_xdg_v6_wlr_surface_at;
 
   if (xdg_surface_v6->role == WLR_XDG_SURFACE_V6_ROLE_TOPLEVEL) {
@@ -181,6 +188,7 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
 
   return wm_surface;
 }
+
 
 void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
   struct wlr_xdg_surface_v6 *xdg_surface_v6 = data;

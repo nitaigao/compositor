@@ -45,6 +45,8 @@ struct wm_surface {
 
   struct wlr_surface* (*wlr_surface_at)(struct wm_surface* this,
     double sx, double sy, double *sub_x, double *sub_y);
+
+  struct wm_seat* (*locate_seat)(struct wm_surface* this);
 };
 
 void handle_move(struct wl_listener *listener, void *data);

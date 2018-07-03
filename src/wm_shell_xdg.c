@@ -53,6 +53,7 @@ static void handle_xdg_commit(struct wl_listener *listener, void *data) {
 }
 
 static void handle_xdg_maximize(struct wl_listener *listener, void *data) {
+  printf("handle_xdg_maximize\n");
   (void)data;
 	struct wm_surface *surface = wl_container_of(listener, surface, maximize);
 	struct wm_window *window = surface->window;
@@ -96,6 +97,8 @@ void wm_surface_xdg_toplevel_set_size(struct wm_surface* this,
 
 void wm_surface_xdg_toplevel_set_maximized(struct wm_surface* this,
   bool maximized) {
+  printf("handle_xdg_maximize\n");
+
   struct wlr_xdg_surface* xdg_surface =
     wlr_xdg_surface_from_wlr_surface(this->surface);
   wlr_xdg_toplevel_set_maximized(xdg_surface, maximized);
@@ -145,6 +148,12 @@ struct wlr_surface* wm_surface_xdg_wlr_surface_at(struct wm_surface* this,
   return surface;
 }
 
+struct wm_seat* wm_surface_xdg_locate_seat(struct wm_surface* this) {
+  struct wm_seat* default_seat = wm_seat_find_or_create(this->server,
+    WM_DEFAULT_SEAT);
+  return default_seat;
+}
+
 struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   struct wm_server* server) {
 
@@ -157,6 +166,7 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   wm_surface->toplevel_set_maximized = wm_surface_xdg_toplevel_set_maximized;
   wm_surface->toplevel_constrained_set_size = wm_surface_xdg_constrained_set_size;
   wm_surface->toplevel_set_focused = wm_surface_xdg_toplevel_set_focused;
+  wm_surface->locate_seat = wm_surface_xdg_locate_seat;
   wm_surface->wlr_surface_at = wm_surface_xdg_wlr_surface_at;
 
   if (xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL) {
