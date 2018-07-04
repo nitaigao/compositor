@@ -105,13 +105,15 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
   struct wm_window* window = render_data->window;
   struct wm_output* output = render_data->output;
 
-  double scale = output->wlr_output->scale;
+  double position_scale = output->wlr_output->scale;
+
+  double dimensions_scale = 1.0;
 
   struct wlr_box box = {
-    .x = (window->x + sx) * scale,
-    .y = (window->y + sy) * scale,
-    .width = surface->current->width * scale,
-    .height = surface->current->height * scale
+    .x = (window->x + sx) * position_scale,
+    .y = (window->y + sy) * position_scale,
+    .width = surface->current->width * dimensions_scale,
+    .height = surface->current->height * dimensions_scale
   };
 
   float matrix[16];

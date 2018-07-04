@@ -26,6 +26,7 @@ struct wm_surface {
   struct wl_listener resize;
   struct wl_listener unmap;
   struct wl_listener new_popup;
+  struct wl_listener request_configure;
 
   void (*render)(struct wm_surface* this,
     wm_surface_render_handler render_handler, void* data);

@@ -40,8 +40,7 @@ static void handle_map_v6(struct wl_listener *listener, void *data) {
 
 static void handle_xdg_v6_commit(struct wl_listener *listener, void *data) {
   (void)data;
-  struct wm_surface *surface =
-		wl_container_of(listener, surface, commit);
+  struct wm_surface *surface = wl_container_of(listener, surface, commit);
 
   struct wlr_xdg_surface_v6* xdg_surface_v6 = wlr_xdg_surface_v6_from_wlr_surface(surface->surface);
 

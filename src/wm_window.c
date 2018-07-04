@@ -116,6 +116,8 @@ void wm_window_move(struct wm_window* window, int x, int y) {
 void wm_window_maximize(struct wm_window* window, bool maximized) {
   window->maximized = maximized;
 
+  printf("wm_window_maximize\n");
+
   if (maximized) {
     wm_window_save_geography(window);
     struct wlr_output* output = wm_window_find_output(window);
@@ -141,8 +143,8 @@ void wm_window_maximize(struct wm_window* window, bool maximized) {
 void wm_window_save_geography(struct wm_window* window) {
   window->saved_x = window->x;
   window->saved_y = window->y;
-  window->saved_width = window->saved_width;
-  window->saved_height = window->saved_height;
+  window->saved_width = window->width;
+  window->saved_height = window->height;
 }
 
 struct wlr_output* wm_window_find_output(struct wm_window* window) {

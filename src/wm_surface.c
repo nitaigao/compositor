@@ -84,7 +84,7 @@ void handle_resize(struct wl_listener *listener, void *data) {
 
   struct wlr_wl_shell_surface_resize_event *e = data;
 
-  struct wm_seat* seat = wm_seat_find_or_create(surface->server, e->seat->seat->name);
+  struct wm_seat* seat = surface->locate_seat(surface);
 
   if (seat->pointer && seat->pointer->mode != WM_POINTER_MODE_RESIZE) {
     seat->pointer->offset_x = seat->pointer->cursor->x;
