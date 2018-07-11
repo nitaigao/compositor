@@ -14,7 +14,6 @@
 
 static void handle_xwayland_commit(struct wl_listener *listener, void *data) {
   (void)data;
-  // printf("handle_xwayland_commit\n");
 
   struct wm_surface *surface = wl_container_of(listener, surface, commit);
 
@@ -39,11 +38,15 @@ void handle_xwayland_map(struct wl_listener *listener, void *data) {
   window->x = 50;
   window->y = 50;
   window->name = xwayland_surface->title;
+  printf("%d %d\n", surface->surface->current->width, surface->surface->current->height);
   window->width = surface->surface->current->width;
   window->height = surface->surface->current->height;
   window->surface = surface;
+  window->pending_width = window->width;
   window->pending_height = window->height;
+  window->pending_x = window->x;
   window->pending_y = window->y;
+  window->xwindow = true;
 
   surface->window = window;
 
@@ -196,7 +199,8 @@ void handle_xwayland_shell_surface(struct wl_listener *listener, void *data) {
 
 struct wm_shell* wm_shell_xwayland_create(struct wm_server *server) {
   struct wm_shell* container = calloc(1, sizeof(struct wm_shell));
-  struct wlr_xwayland* shell = wlr_xwayland_create(server->wl_display, server->compositor, false);
+  struct wlr_xwayland* shell = wlr_xwayland_create(server->wl_display,
+    server->compositor, true);
   wl_signal_add(&shell->events.new_surface, &container->shell_surface);
   container->shell_surface.notify = handle_xwayland_shell_surface;
   container->shell = shell;

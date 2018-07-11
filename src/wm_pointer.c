@@ -122,15 +122,15 @@ void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time) {
     struct wlr_surface *surface = window->surface->wlr_surface_at(
       window->surface, local_x, local_y, &sx, &sy);
 
-    sx *= 2;
-    sy *= 2;
-
-    // printf("%f %f %f %f\n", local_x, local_y, sx, sy);
-
     if (surface) {
+      if (window->xwindow) {
+        sx *= 2;
+        sy *= 2;
+      }
       wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
       wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
     } else {
+      printf("no focus\n");
       wlr_seat_pointer_clear_focus(pointer->seat->seat);
     }
   }

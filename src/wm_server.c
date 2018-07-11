@@ -106,6 +106,7 @@ void wm_server_run(struct wm_server* server) {
   }
 
   printf("Backend started\n");
+  setenv("GDK_SCALE", "2", true);
   setenv("WAYLAND_DISPLAY", server->socket, true);
   printf("Running compositor on wayland display '%s'\n", server->socket);
 

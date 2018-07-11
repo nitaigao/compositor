@@ -106,8 +106,11 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
   struct wm_output* output = render_data->output;
 
   double position_scale = output->wlr_output->scale;
+  double dimensions_scale = output->wlr_output->scale;
 
-  double dimensions_scale = 1.0;
+  if (window->xwindow) {
+    dimensions_scale = 1;
+  }
 
   struct wlr_box box = {
     .x = (window->x + sx) * position_scale,
@@ -164,14 +167,14 @@ void wm_output_render(struct wm_output* output) {
       continue;
     }
 
-    struct wlr_box window_geometry = wm_window_geometry(window);
+    // struct wlr_box window_geometry = wm_window_geometry(window);
 
-    bool within_output = wlr_output_layout_intersects(server->layout,
-      wlr_output, &window_geometry);
+    // bool within_output = wlr_output_layout_intersects(server->layout,
+    //   wlr_output, &window_geometry);
 
-    if (within_output) {
+    // if (within_output) {
       window->surface->render(window->surface, render_surface, &render_data);
-    }
+    // }
   }
 
   wl_list_for_each_reverse(window, &server->windows, link) {

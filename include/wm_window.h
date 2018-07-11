@@ -33,6 +33,8 @@ struct wm_window {
 
   struct wm_surface *surface;
   struct wl_list link;
+
+  bool xwindow;
 };
 
 struct wlr_box wm_window_geometry(struct wm_window* window);
