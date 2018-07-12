@@ -117,11 +117,6 @@ void wm_window_save_geography(struct wm_window* window) {
   window->saved_width = window->width;
   window->saved_height = window->height;
 
-  // if (window->xwindow) {
-  //   window->saved_width *= 0.5f;
-  //   window->saved_height *= 0.5f;
-  // }
-
   printf("Saved geometry x: %d y: %d width: %d height: %d\n",
     window->saved_x, window->saved_y, window->saved_width, window->saved_height);
 }
