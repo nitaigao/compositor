@@ -20,7 +20,7 @@ void exec_command(const char* shell_cmd) {
   printf("Executing: %s\n", shell_cmd);
   pid_t pid = fork();
   if (pid < 0) {
-    wlr_log(L_ERROR, "cannot execute binding command: fork() failed");
+    wlr_log(WLR_ERROR, "cannot execute binding command: fork() failed");
     return;
   } else if (pid == 0) {
     execl("/bin/sh", "/bin/sh", "-c", shell_cmd, (void *)NULL);
@@ -96,7 +96,17 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
         return;
       }
 
+      if (super && sym == XKB_KEY_space) {
+        exec_command("dmenu_run");
+        return;
+      }
+
       if (alt && sym == XKB_KEY_Tab) {
+        wm_server_switch_window(keyboard->seat->server);
+        return;
+      }
+
+      if (super && sym == XKB_KEY_Tab) {
         wm_server_switch_window(keyboard->seat->server);
         return;
       }
@@ -174,7 +184,7 @@ struct wm_keyboard* wm_keyboard_create(struct wlr_input_device* device,
   struct xkb_context *context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 
   if (!context) {
-    wlr_log(L_ERROR, "Failed to create XKB context");
+    wlr_log(WLR_ERROR, "Failed to create XKB context");
     exit(1);
   }
 

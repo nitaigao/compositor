@@ -30,6 +30,7 @@ struct wm_window {
   int saved_height;
 
   bool maximized;
+  bool minimized;
 
   struct wm_surface *surface;
   struct wl_list link;
@@ -49,6 +50,8 @@ void wm_window_resize(struct wm_window* window, struct wm_pointer* pointer);
 void wm_window_move(struct wm_window* window, int x, int y);
 
 void wm_window_maximize(struct wm_window* window, bool maximized);
+
+void wm_window_minimize(struct wm_window* window, bool minimized);
 
 void wm_window_save_geography(struct wm_window* window);
 

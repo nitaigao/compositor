@@ -35,12 +35,11 @@ void handle_xwayland_map(struct wl_listener *listener, void *data) {
   surface->surface = xwayland_surface->surface;
 
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
-  window->x = 50;
-  window->y = 50;
+  window->x = xwayland_surface->x;
+  window->y = xwayland_surface->y;
   window->name = xwayland_surface->title;
-  printf("%d %d\n", surface->surface->current->width, surface->surface->current->height);
-  window->width = surface->surface->current->width;
-  window->height = surface->surface->current->height;
+  window->width = xwayland_surface->surface->current.width;
+	window->height = xwayland_surface->surface->current.height;
   window->surface = surface;
   window->pending_width = window->width;
   window->pending_height = window->height;
@@ -93,7 +92,7 @@ void wm_surface_xwayland_toplevel_set_size(struct wm_surface* this,
     wlr_xwayland_surface_from_wlr_surface(this->surface);
 
   wlr_xwayland_surface_configure(xwayland_surface,
-    this->window->x, this->window->y, width * 2, height * 2);
+    this->window->x, this->window->y, width, height);
 }
 
 void wm_surface_xwayland_toplevel_set_maximized(struct wm_surface* this,
@@ -117,7 +116,7 @@ void wm_surface_xwayland_constrained_set_size(struct wm_surface* this,
     ? width : (int)xwayland_surface->size_hints->min_width;
 
   wlr_xwayland_surface_configure(xwayland_surface,
-    this->window->x, this->window->y, constrained_width * 2, constrained_height * 2);
+    this->window->x, this->window->y, constrained_width, constrained_height);
 }
 
 void wm_surface_xwayland_toplevel_set_focused(struct wm_surface* this,
@@ -149,6 +148,12 @@ struct wm_seat* wm_surface_xwayland_locate_seat(struct wm_surface* this) {
   return default_seat;
 }
 
+static void  handle_xwayland_resize(struct wl_listener *listener, void *data) {
+  struct wlr_xwayland_resize_event *e = data;
+	struct wm_surface *surface = wl_container_of(listener, surface, resize);
+  wm_surface_begin_resize(surface, e->edges);
+}
+
 struct wm_surface* wm_surface_xwayland_create(struct wlr_xwayland_surface* xwayland_surface,
   struct wm_server* server) {
 
@@ -173,13 +178,17 @@ struct wm_surface* wm_surface_xwayland_create(struct wlr_xwayland_surface* xwayl
   wl_signal_add(&xwayland_surface->events.request_move,
     &wm_surface->move);
 
-  wm_surface->resize.notify = handle_resize;
+  wm_surface->resize.notify = handle_xwayland_resize;
 	wl_signal_add(&xwayland_surface->events.request_resize,
     &wm_surface->resize);
 
   wm_surface->maximize.notify = handle_xwayland_maximize;
 	wl_signal_add(&xwayland_surface->events.request_maximize,
     &wm_surface->maximize);
+
+  wm_surface->minimize.notify = handle_minimize;
+	wl_signal_add(&xwayland_surface->events.request_minimize,
+    &wm_surface->minimize);
 
   wm_surface->request_configure.notify = handle_xwayland_request_configure;
 	wl_signal_add(&xwayland_surface->events.request_configure,

@@ -22,6 +22,7 @@ struct wm_surface {
   struct wl_listener commit;
   struct wl_listener map;
   struct wl_listener maximize;
+  struct wl_listener minimize;
   struct wl_listener move;
   struct wl_listener resize;
   struct wl_listener unmap;
@@ -57,5 +58,9 @@ void handle_resize(struct wl_listener *listener, void *data);
 void handle_map(struct wl_listener *listener, void *data);
 
 void handle_unmap(struct wl_listener *listener, void *data);
+
+void handle_minimize(struct wl_listener *listener, void *data);
+
+void wm_surface_begin_resize(struct wm_surface* surface, uint32_t edges);
 
 #endif

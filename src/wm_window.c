@@ -1,6 +1,7 @@
 #include "wm_window.h"
 
 #include <wlr/xwayland.h>
+#include <wlr/util/edges.h>
 #include <wlr/types/wlr_xdg_shell_v6.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_cursor.h>
@@ -50,51 +51,19 @@ void wm_window_resize(struct wm_window* window, struct wm_pointer* pointer) {
     int width = pointer->window_width;
     int height = pointer->window_height;
 
-    if (pointer->resize_edge == WL_SHELL_SURFACE_RESIZE_TOP) {
+    if (pointer->resize_edge & WLR_EDGE_TOP) {
       y = pointer->window_y + dy;
       height -= dy;
       window->update_y = true;
-    }
-
-    if (pointer->resize_edge == WL_SHELL_SURFACE_RESIZE_BOTTOM) {
+    } else if (pointer->resize_edge & WLR_EDGE_BOTTOM) {
       height += dy;
     }
 
-    if (pointer->resize_edge == WL_SHELL_SURFACE_RESIZE_LEFT) {
+    if (pointer->resize_edge & WLR_EDGE_LEFT) {
       x = pointer->window_x + dx;
       width -= dx;
       window->update_x = true;
-    }
-
-    if (pointer->resize_edge == WL_SHELL_SURFACE_RESIZE_RIGHT) {
-      width += dx;
-    }
-
-    if (pointer->resize_edge == WL_SHELL_SURFACE_RESIZE_BOTTOM_LEFT) {
-      x = pointer->window_x + dx;
-      width -= dx;
-      window->update_x = true;
-      height += dy;
-    }
-
-    if (pointer->resize_edge == WL_SHELL_SURFACE_RESIZE_BOTTOM_RIGHT) {
-      height += dy;
-      width += dx;
-    }
-
-    if (pointer->resize_edge == WL_SHELL_SURFACE_RESIZE_TOP_LEFT) {
-      y = pointer->window_y + dy;
-      height -= dy;
-      window->update_y = true;
-      x = pointer->window_x + dx;
-      width -= dx;
-      window->update_x = true;
-    }
-
-    if (pointer->resize_edge == WL_SHELL_SURFACE_RESIZE_TOP_RIGHT) {
-      y = pointer->window_y + dy;
-      height -= dy;
-      window->update_y = true;
+    } else if (pointer->resize_edge & WLR_EDGE_RIGHT) {
       width += dx;
     }
 
@@ -113,10 +82,12 @@ void wm_window_move(struct wm_window* window, int x, int y) {
   window->y = y;
 }
 
+void wm_window_minimize(struct wm_window* window, bool minimized) {
+  window->minimized = minimized;
+}
+
 void wm_window_maximize(struct wm_window* window, bool maximized) {
   window->maximized = maximized;
-
-  printf("wm_window_maximize\n");
 
   if (maximized) {
     wm_window_save_geography(window);
@@ -146,10 +117,10 @@ void wm_window_save_geography(struct wm_window* window) {
   window->saved_width = window->width;
   window->saved_height = window->height;
 
-  if (window->xwindow) {
-    window->saved_width *= 0.5f;
-    window->saved_height *= 0.5f;
-  }
+  // if (window->xwindow) {
+  //   window->saved_width *= 0.5f;
+  //   window->saved_height *= 0.5f;
+  // }
 
   printf("Saved geometry x: %d y: %d width: %d height: %d\n",
     window->saved_x, window->saved_y, window->saved_width, window->saved_height);

@@ -78,23 +78,26 @@ void handle_move(struct wl_listener *listener, void *data) {
   }
 }
 
-void handle_resize(struct wl_listener *listener, void *data) {
-  struct wm_surface *surface =
-		wl_container_of(listener, surface, resize);
+void handle_minimize(struct wl_listener *listener, void *data) {
+  (void)data;
+  struct wm_surface *surface = wl_container_of(listener, surface, minimize);
+  wm_window_minimize(surface->window, true);
+}
 
-  struct wlr_wl_shell_surface_resize_event *e = data;
-
+void wm_surface_begin_resize(struct wm_surface* surface, uint32_t edges) {
   struct wm_seat* seat = surface->locate_seat(surface);
 
-  if (seat->pointer && seat->pointer->mode != WM_POINTER_MODE_RESIZE) {
+  wm_pointer_set_resize_edge(seat->pointer, edges);
+
+  if (seat->pointer) {
     seat->pointer->offset_x = seat->pointer->cursor->x;
     seat->pointer->offset_y = seat->pointer->cursor->y;
     seat->pointer->window_x = surface->window->x;
     seat->pointer->window_y = surface->window->y;
     seat->pointer->window_width = surface->window->width;
     seat->pointer->window_height = surface->window->height;
-
     wm_pointer_set_mode(seat->pointer, WM_POINTER_MODE_RESIZE);
-    wm_pointer_set_resize_edge(seat->pointer, e->edges);
   }
+
+  wlr_seat_pointer_clear_focus(seat->seat);
 }

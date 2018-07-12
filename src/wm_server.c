@@ -106,7 +106,7 @@ void wm_server_run(struct wm_server* server) {
   }
 
   printf("Backend started\n");
-  setenv("GDK_SCALE", "2", true);
+  // setenv("GDK_SCALE", "2", true);
   setenv("WAYLAND_DISPLAY", server->socket, true);
   printf("Running compositor on wayland display '%s'\n", server->socket);
 
@@ -170,7 +170,7 @@ struct wm_server* wm_server_create() {
   server->xcursor_manager = wlr_xcursor_manager_create("default", 24);
 
   if (!server->xcursor_manager) {
-    wlr_log(L_ERROR, "Failed to load cursor");
+    wlr_log(WLR_ERROR, "Failed to load cursor");
     return NULL;
   }
 
@@ -224,11 +224,26 @@ void wm_server_maximize_focused_window(struct wm_server* server) {
 void wm_server_add_window(struct wm_server* server,
   struct wm_window* window, struct wm_seat* seat) {
 
+  wlr_seat_keyboard_clear_focus(seat->seat);
+
   struct wm_window *old_window;
   wl_list_for_each(old_window, &server->windows, link) {
     old_window->surface->toplevel_set_focused(old_window->surface, seat, false);
   }
 
+  wl_list_insert(&server->windows, &window->link);
+  window->surface->toplevel_set_focused(window->surface, seat, true);
+}
+
+static void wm_server_focus_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat) {
+
+  struct wm_window* old_window;
+  wl_list_for_each(old_window, &server->windows, link) {
+    window->surface->toplevel_set_focused(window->surface, seat, false);
+  }
+
+  wl_list_remove(&window->link);
   wl_list_insert(&server->windows, &window->link);
   window->surface->toplevel_set_focused(window->surface, seat, true);
 }
@@ -245,6 +260,10 @@ void wm_server_switch_window(struct wm_server* server) {
     return;
   }
 
+  if (server->pending_focus_index < 0) {
+    server->pending_focus_index = 0;
+  }
+
   server->pending_focus_index++;
 
   if (server->pending_focus_index == window_count) {
@@ -256,22 +275,10 @@ void wm_server_switch_window(struct wm_server* server) {
   wl_list_for_each(window, &server->windows, link) {
     if (i++ == server->pending_focus_index) {
       printf("Focus switch %s\n", window->name);
+      wm_window_minimize(window, false);
       break;
     }
   }
-}
-
-static void wm_server_focus_window(struct wm_server* server,
-  struct wm_window* window, struct wm_seat* seat) {
-
-  struct wm_window* old_window;
-  wl_list_for_each(old_window, &server->windows, link) {
-    window->surface->toplevel_set_focused(window->surface, seat, false);
-  }
-
-  wl_list_remove(&window->link);
-  wl_list_insert(&server->windows, &window->link);
-  window->surface->toplevel_set_focused(window->surface, seat, true);
 }
 
 void wm_server_commit_window_switch(struct wm_server* server,
@@ -284,7 +291,7 @@ void wm_server_commit_window_switch(struct wm_server* server,
       break;
     }
   }
-  server->pending_focus_index = 0;
+  server->pending_focus_index = -1;
 }
 
 void wm_server_focus_window_under_point(struct wm_server* server,

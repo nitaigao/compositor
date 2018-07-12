@@ -108,21 +108,21 @@ static void render_surface(struct wlr_surface *surface, int sx, int sy, void *da
   double position_scale = output->wlr_output->scale;
   double dimensions_scale = output->wlr_output->scale;
 
-  if (window->xwindow) {
-    dimensions_scale = 1;
-  }
+  // if (window->xwindow) {
+  //   dimensions_scale = 1;
+  // }
 
   struct wlr_box box = {
     .x = (window->x + sx) * position_scale,
     .y = (window->y + sy) * position_scale,
-    .width = surface->current->width * dimensions_scale,
-    .height = surface->current->height * dimensions_scale
+    .width = surface->current.width * dimensions_scale,
+    .height = surface->current.height * dimensions_scale
   };
 
   float matrix[16];
 
   enum wl_output_transform transform = wlr_output_transform_invert(
-    surface->current->transform);
+    surface->current.transform);
 
 	wlr_matrix_project_box(matrix, &box, transform, 0,
     output->wlr_output->transform_matrix);
@@ -167,14 +167,30 @@ void wm_output_render(struct wm_output* output) {
       continue;
     }
 
-    // struct wlr_box window_geometry = wm_window_geometry(window);
+    if (window->minimized) {
+      continue;
+    }
 
-    // bool within_output = wlr_output_layout_intersects(server->layout,
-    //   wlr_output, &window_geometry);
+    struct wlr_box window_geometry = wm_window_geometry(window);
 
-    // if (within_output) {
+    bool within_output = wlr_output_layout_intersects(server->layout,
+      wlr_output, &window_geometry);
+
+    if (within_output) {
       window->surface->render(window->surface, render_surface, &render_data);
-    // }
+    }
+  }
+
+  int index = 0;
+  wl_list_for_each(window, &server->windows, link) {
+    struct render_data render_data = {
+      .output = output,
+      .window = window
+    };
+
+    if (index++ == server->pending_focus_index) {
+      window->surface->render(window->surface, render_surface, &render_data);
+    }
   }
 
   wl_list_for_each_reverse(window, &server->windows, link) {

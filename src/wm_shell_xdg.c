@@ -3,6 +3,7 @@
 #include "wm_shell_xdg.h"
 
 #include <stdlib.h>
+#include <wlr/types/wlr_wl_shell.h>
 #include <wlr/types/wlr_xdg_shell.h>
 
 #include "wm_pointer.h"
@@ -21,11 +22,11 @@ void handle_xdg_map(struct wl_listener *listener, void *data) {
   surface->surface = xdg_surface->surface;
 
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
-  window->x = 50;
-  window->y = 50;
+  window->x = 0;
+  window->y = 0;
   window->name = xdg_surface->toplevel->title;
-  window->width = surface->surface->current->width;
-  window->height = surface->surface->current->height;
+  window->width = surface->surface->current.width;
+  window->height = surface->surface->current.height;
   window->surface = surface;
   window->pending_height = window->height;
   window->pending_y = window->y;
@@ -65,6 +66,12 @@ static void handle_xdg_maximize(struct wl_listener *listener, void *data) {
 		return;
   }
   wm_window_maximize(window, !window->maximized);
+}
+
+static void handle_xdg_resize(struct wl_listener *listener, void *data) {
+  struct wlr_wl_shell_surface_resize_event *e = data;
+	struct wm_surface *surface = wl_container_of(listener, surface, resize);
+  wm_surface_begin_resize(surface, e->edges);
 }
 
 void wm_surface_xdg_render(struct wm_surface* this,
@@ -183,13 +190,16 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   wl_signal_add(&xdg_surface->toplevel->events.request_move,
     &wm_surface->move);
 
-  wm_surface->resize.notify = handle_resize;
+  wm_surface->resize.notify = handle_xdg_resize;
 	wl_signal_add(&xdg_surface->toplevel->events.request_resize,
     &wm_surface->resize);
 
   wm_surface->maximize.notify = handle_xdg_maximize;
 	wl_signal_add(&xdg_surface->toplevel->events.request_maximize,
     &wm_surface->maximize);
+
+  wm_surface->minimize.notify = handle_minimize;
+	wl_signal_add(&xdg_surface->toplevel->events.request_minimize, &wm_surface->minimize);
 
   wm_surface->commit.notify = handle_xdg_commit;
 	wl_signal_add(&xdg_surface->surface->events.commit, &wm_surface->commit);

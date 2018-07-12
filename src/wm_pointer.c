@@ -83,12 +83,18 @@ void wm_pointer_set_default_cursor(struct wm_pointer* pointer) {
 		DEFAULT_CURSOR, pointer->cursor);
 }
 
-void wm_pointer_set_resize_edge(struct wm_pointer* pointer, int resize_edge) {
+void wm_pointer_set_resize_edge(struct wm_pointer* pointer, uint32_t resize_edge) {
   pointer->resize_edge = resize_edge;
 }
 
 void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time) {
   pointer->focused_surface = NULL;
+
+  struct wlr_surface* focused_surface = pointer->seat->seat->pointer_state.focused_surface;
+
+  if (!focused_surface) {
+    wm_pointer_set_default_cursor(pointer);
+  }
 
   int list_length = wl_list_length(&pointer->server->windows);
 
@@ -98,10 +104,11 @@ void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time) {
 
     window->update_x = false;
     window->update_y = false;
-    pointer->focused_surface = window->surface;
+    // pointer->focused_surface = window->surface;
 
     if (pointer->mode == WM_POINTER_MODE_RESIZE) {
       wm_window_resize(window, pointer);
+      return;
     }
 
     if (pointer->mode == WM_POINTER_MODE_MOVE) {
@@ -123,14 +130,9 @@ void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time) {
       window->surface, local_x, local_y, &sx, &sy);
 
     if (surface) {
-      if (window->xwindow) {
-        sx *= 2;
-        sy *= 2;
-      }
       wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
       wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
     } else {
-      printf("no focus\n");
       wlr_seat_pointer_clear_focus(pointer->seat->seat);
     }
   }

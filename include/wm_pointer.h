@@ -2,6 +2,7 @@
 #define __WM_POINTER_H
 
 #include <wayland-server.h>
+#include <wlr/util/edges.h>
 
 #define WM_POINTER_MODE_FREE 0
 #define WM_POINTER_MODE_MOVE 1
@@ -9,7 +10,7 @@
 
 struct wm_pointer {
   int mode;
-  int resize_edge;
+  uint32_t resize_edge;
 
   int offset_x;
   int offset_y;
@@ -37,7 +38,8 @@ void wm_pointer_set_mode(struct wm_pointer* pointer, int mode);
 
 void wm_pointer_set_default_cursor(struct wm_pointer* pointer);
 
-void wm_pointer_set_resize_edge(struct wm_pointer* pointer, int resize_edge);
+void wm_pointer_set_resize_edge(struct wm_pointer* pointer,
+  uint32_t resize_edge);
 
 void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time);
 

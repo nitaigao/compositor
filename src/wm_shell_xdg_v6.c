@@ -3,6 +3,7 @@
 #include "wm_shell_xdg_v6.h"
 
 #include <stdlib.h>
+#include <wlr/types/wlr_wl_shell.h>
 #include <wlr/types/wlr_xdg_shell_v6.h>
 
 #include "wm_pointer.h"
@@ -23,11 +24,11 @@ static void handle_map_v6(struct wl_listener *listener, void *data) {
   surface->surface = xdg_surface_v6->surface;
 
   struct wm_window *window = calloc(1, sizeof(struct wm_window));
-  window->x = 50;
-  window->y = 50;
+  window->x = 0;
+  window->y = 0;
   window->name = xdg_surface_v6->toplevel->title;
-  window->width = surface->surface->current->width;
-  window->height = surface->surface->current->height;
+  window->width = surface->surface->current.width;
+  window->height = surface->surface->current.height;
   window->surface = surface;
   window->pending_height = window->height;
   window->pending_y = window->y;
@@ -63,6 +64,12 @@ static void handle_xdg_v6_maximize(struct wl_listener *listener, void *data) {
 		return;
   }
   wm_window_maximize(window, !window->maximized);
+}
+
+static void handle_xdg_v6_resize(struct wl_listener *listener, void *data) {
+  struct wlr_wl_shell_surface_resize_event *e = data;
+	struct wm_surface *surface = wl_container_of(listener, surface, resize);
+  wm_surface_begin_resize(surface, e->edges);
 }
 
 void wm_surface_xdg_v6_render(struct wm_surface* this,
@@ -157,7 +164,6 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->render = wm_surface_xdg_v6_render;
   wm_surface->frame_done = wm_surface_xdg_v6_frame_done;
   wm_surface->toplevel_set_size = wm_surface_xdg_v6_toplevel_set_size;
-  wm_surface->toplevel_set_maximized = wm_surface_xdg_toplevel_v6_set_maximized;
   wm_surface->toplevel_constrained_set_size = wm_surface_xdg_v6_constrained_set_size;
   wm_surface->toplevel_set_focused = wm_surface_xdg_v6_toplevel_set_focused;
   wm_surface->locate_seat = wm_surface_xdg_v6_locate_seat;
@@ -176,7 +182,7 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->move.notify = handle_move;
   wl_signal_add(&xdg_surface_v6->toplevel->events.request_move, &wm_surface->move);
 
-  wm_surface->resize.notify = handle_resize;
+  wm_surface->resize.notify = handle_xdg_v6_resize;
 	wl_signal_add(&xdg_surface_v6->toplevel->events.request_resize, &wm_surface->resize);
 
   wm_surface->maximize.notify = handle_xdg_v6_maximize;
@@ -185,9 +191,11 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->commit.notify = handle_xdg_v6_commit;
 	wl_signal_add(&xdg_surface_v6->surface->events.commit, &wm_surface->commit);
 
+  wm_surface->minimize.notify = handle_minimize;
+	wl_signal_add(&xdg_surface_v6->toplevel->events.request_minimize, &wm_surface->minimize);
+
   return wm_surface;
 }
-
 
 void handle_xdg_shell_v6_surface(struct wl_listener *listener, void *data) {
   struct wlr_xdg_surface_v6 *xdg_surface_v6 = data;
