@@ -132,6 +132,20 @@ void send_frame_done(struct wlr_surface *surface, int sx, int sy, void *data) {
   wlr_surface_send_frame_done(surface, now);
 }
 
+void render_window(struct wm_window* window, struct wm_output* output) {
+  struct render_data render_data = {
+    .output = output,
+    .window = window
+  };
+
+  if (!window->surface->render) {
+    printf("Surface has no render function\n");
+    return;
+  }
+
+  window->surface->render(window->surface, render_surface, &render_data);
+}
+
 void wm_output_render(struct wm_output* output) {
   struct wm_server *server = output->server;
   struct wlr_output *wlr_output = output->wlr_output;
@@ -149,16 +163,6 @@ void wm_output_render(struct wm_output* output) {
 
   struct wm_window *window;
   wl_list_for_each_reverse(window, &server->windows, link) {
-    struct render_data render_data = {
-      .output = output,
-      .window = window
-    };
-
-    if (!window->surface->render) {
-      printf("Surface has no render function\n");
-      continue;
-    }
-
     if (window->minimized) {
       continue;
     }
@@ -169,19 +173,14 @@ void wm_output_render(struct wm_output* output) {
       wlr_output, &window_geometry);
 
     if (within_output) {
-      window->surface->render(window->surface, render_surface, &render_data);
+      render_window(window, output);
     }
   }
 
   int index = 0;
   wl_list_for_each(window, &server->windows, link) {
-    struct render_data render_data = {
-      .output = output,
-      .window = window
-    };
-
     if (index++ == server->pending_focus_index) {
-      window->surface->render(window->surface, render_surface, &render_data);
+      render_window(window, output);
     }
   }
 

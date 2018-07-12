@@ -36,6 +36,8 @@
 void handle_unmap(struct wl_listener *listener, void *data) {
   (void)data;
 
+  printf("handle_unmap\n");
+
   struct wm_surface *wm_surface = wl_container_of(listener, wm_surface, unmap);
 
   wl_list_remove(&wm_surface->unmap.link);

@@ -38,8 +38,8 @@ void handle_xwayland_map(struct wl_listener *listener, void *data) {
   window->x = xwayland_surface->x;
   window->y = xwayland_surface->y;
   window->name = xwayland_surface->title;
-  window->width = xwayland_surface->surface->current.width;
-	window->height = xwayland_surface->surface->current.height;
+  window->width = xwayland_surface->width;
+  window->height = xwayland_surface->height;
   window->surface = surface;
   window->pending_width = window->width;
   window->pending_height = window->height;
@@ -57,9 +57,21 @@ void handle_xwayland_map(struct wl_listener *listener, void *data) {
 }
 
 static void handle_xwayland_request_configure(struct wl_listener *listener, void *data) {
-  (void)listener;
-  (void)data;
+  struct wm_surface *surface = wl_container_of(listener, surface, request_configure);
+
+  struct wlr_xwayland_surface_configure_event *event = data;
+
+  if (!surface->surface) {
+    return;
+  }
+
+  struct wlr_xwayland_surface* xwayland_surface =
+    wlr_xwayland_surface_from_wlr_surface(surface->surface);
+
   printf("handle_xwayland_request_configure\n");
+
+  wlr_xwayland_surface_configure(xwayland_surface, event->x, event->y,
+    event->width, event->height);
 }
 
 static void handle_xwayland_maximize(struct wl_listener *listener, void *data) {
@@ -186,9 +198,9 @@ struct wm_surface* wm_surface_xwayland_create(struct wlr_xwayland_surface* xwayl
 	wl_signal_add(&xwayland_surface->events.request_maximize,
     &wm_surface->maximize);
 
-  wm_surface->minimize.notify = handle_minimize;
-	wl_signal_add(&xwayland_surface->events.request_minimize,
-    &wm_surface->minimize);
+  // wm_surface->minimize.notify = handle_minimize;
+	// wl_signal_add(&xwayland_surface->events.request_minimize,
+  //   &wm_surface->minimize);
 
   wm_surface->request_configure.notify = handle_xwayland_request_configure;
 	wl_signal_add(&xwayland_surface->events.request_configure,
