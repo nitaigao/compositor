@@ -88,7 +88,6 @@ struct wm_output* wm_output_create(struct wlr_output* wlr_output,
 struct render_data {
   struct wm_output *output;
   struct wm_window* window;
-  int surface_type;
 };
 
 static void render_surface(struct wlr_surface *surface, int sx, int sy, void *data) {
