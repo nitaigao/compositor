@@ -62,10 +62,11 @@ void handle_unmap(struct wl_listener *listener, void *data) {
   free(wm_surface);
 }
 
-void handle_move(struct wl_listener *listener, void *data) {
+void handle_request_move(struct wl_listener *listener, void *data) {
   struct wm_surface *surface = wl_container_of(listener, surface, move);
   struct wlr_wl_shell_surface_move_event *event = data;
   (void)event;
+  printf("handle_request_move\n");
 
   struct wm_seat *seat = surface->locate_seat(surface);
 

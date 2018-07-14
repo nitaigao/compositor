@@ -161,6 +161,17 @@ struct wm_seat* wm_surface_xdg_locate_seat(struct wm_surface* this) {
   return default_seat;
 }
 
+bool wm_surface_xdg_under_point(struct wm_surface* this,
+  int sx, int sy) {
+  struct wlr_xdg_surface* xdg_surface = wlr_xdg_surface_from_wlr_surface(
+    this->surface);
+  double sub_x, sub_y;
+  struct wlr_surface *surface = wlr_xdg_surface_surface_at(xdg_surface,
+    sx, sy, &sub_x, &sub_y);
+  bool is_under_point = this->surface == surface;
+  return is_under_point;
+}
+
 struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   struct wm_server* server) {
 
@@ -169,6 +180,7 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   wm_surface->surface = xdg_surface->surface;
   wm_surface->render = wm_surface_xdg_render;
   wm_surface->frame_done = wm_surface_xdg_frame_done;
+  wm_surface->under_point = wm_surface_xdg_under_point;
   wm_surface->toplevel_set_size = wm_surface_xdg_toplevel_set_size;
   wm_surface->toplevel_set_maximized = wm_surface_xdg_toplevel_set_maximized;
   wm_surface->toplevel_constrained_set_size = wm_surface_xdg_constrained_set_size;
@@ -186,7 +198,7 @@ struct wm_surface* wm_surface_xdg_create(struct wlr_xdg_surface* xdg_surface,
   wm_surface->unmap.notify = handle_unmap;
   wl_signal_add(&xdg_surface->events.unmap, &wm_surface->unmap);
 
-  wm_surface->move.notify = handle_move;
+  wm_surface->move.notify = handle_request_move;
   wl_signal_add(&xdg_surface->toplevel->events.request_move,
     &wm_surface->move);
 

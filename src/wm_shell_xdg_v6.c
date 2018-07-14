@@ -157,6 +157,17 @@ struct wm_seat* wm_surface_xdg_v6_locate_seat(struct wm_surface* this) {
   return default_seat;
 }
 
+bool wm_surface_xdg_v6_under_point(struct wm_surface* this,
+  int sx, int sy) {
+  struct wlr_xdg_surface_v6* xdg_surface_v6 = wlr_xdg_surface_v6_from_wlr_surface(
+    this->surface);
+  double sub_x, sub_y;
+  struct wlr_surface *surface = wlr_xdg_surface_v6_surface_at(xdg_surface_v6,
+    sx, sy, &sub_x, &sub_y);
+  bool is_under_point = this->surface == surface;
+  return is_under_point;
+}
+
 struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surface_v6, struct wm_server* server) {
   struct wm_surface *wm_surface = calloc(1, sizeof(struct wm_surface));
   wm_surface->server = server;
@@ -166,6 +177,7 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->toplevel_set_size = wm_surface_xdg_v6_toplevel_set_size;
   wm_surface->toplevel_constrained_set_size = wm_surface_xdg_v6_constrained_set_size;
   wm_surface->toplevel_set_focused = wm_surface_xdg_v6_toplevel_set_focused;
+  wm_surface->under_point = wm_surface_xdg_v6_under_point;
   wm_surface->locate_seat = wm_surface_xdg_v6_locate_seat;
   wm_surface->wlr_surface_at = wm_surface_xdg_v6_wlr_surface_at;
 
@@ -179,7 +191,7 @@ struct wm_surface* wm_surface_xdg_v6_create(struct wlr_xdg_surface_v6* xdg_surfa
   wm_surface->unmap.notify = handle_unmap;
   wl_signal_add(&xdg_surface_v6->events.unmap, &wm_surface->unmap);
 
-  wm_surface->move.notify = handle_move;
+  wm_surface->move.notify = handle_request_move;
   wl_signal_add(&xdg_surface_v6->toplevel->events.request_move, &wm_surface->move);
 
   wm_surface->resize.notify = handle_xdg_v6_resize;

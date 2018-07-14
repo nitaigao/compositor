@@ -57,4 +57,6 @@ void wm_window_save_geography(struct wm_window* window);
 
 struct wlr_output* wm_window_find_output(struct wm_window* window);
 
+bool wm_window_under_point(struct wm_window* window, int x, int y);
+
 #endif

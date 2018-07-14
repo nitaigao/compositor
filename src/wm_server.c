@@ -220,22 +220,12 @@ void wm_server_maximize_focused_window(struct wm_server* server) {
   }
 }
 
-void wm_server_add_window(struct wm_server* server,
-  struct wm_window* window, struct wm_seat* seat) {
-
-  wlr_seat_keyboard_clear_focus(seat->seat);
-
-  struct wm_window *old_window;
-  wl_list_for_each(old_window, &server->windows, link) {
-    old_window->surface->toplevel_set_focused(old_window->surface, seat, false);
-  }
-
-  wl_list_insert(&server->windows, &window->link);
-  window->surface->toplevel_set_focused(window->surface, seat, true);
-}
-
 static void wm_server_focus_window(struct wm_server* server,
   struct wm_window* window, struct wm_seat* seat) {
+
+  printf("focus window %p\n", (void*)window);
+
+  wlr_seat_keyboard_clear_focus(seat->seat);
 
   struct wm_window* old_window;
   wl_list_for_each(old_window, &server->windows, link) {
@@ -245,6 +235,15 @@ static void wm_server_focus_window(struct wm_server* server,
   wl_list_remove(&window->link);
   wl_list_insert(&server->windows, &window->link);
   window->surface->toplevel_set_focused(window->surface, seat, true);
+
+  seat->pointer->focused_surface = window->surface;
+}
+
+void wm_server_add_window(struct wm_server* server,
+  struct wm_window* window, struct wm_seat* seat) {
+
+  wl_list_insert(&server->windows, &window->link);
+  wm_server_focus_window(server, window, seat);
 }
 
 void wm_server_switch_window(struct wm_server* server) {
@@ -295,13 +294,13 @@ void wm_server_commit_window_switch(struct wm_server* server,
 
 void wm_server_focus_window_under_point(struct wm_server* server,
   struct wm_seat* seat, double x, double y) {
-  struct wm_window *window, *tmp;
-  wl_list_for_each_safe(window, tmp, &seat->server->windows, link) {
-    struct wlr_box geometry = wm_window_geometry(window);
-    bool under_mouse = wlr_box_contains_point(&geometry, x, y);
+  seat->pointer->focused_surface = NULL;
+  struct wm_window *window;
+  wl_list_for_each(window, &seat->server->windows, link) {
+    bool under_mouse = wm_window_under_point(window, x, y);
     if (under_mouse) {
       wm_server_focus_window(server, window, seat);
-      break;
+      return;
     }
   }
 }

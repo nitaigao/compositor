@@ -23,7 +23,7 @@ void exec_command(const char* shell_cmd) {
     wlr_log(WLR_ERROR, "cannot execute binding command: fork() failed");
     return;
   } else if (pid == 0) {
-    execl("/bin/sh", "/bin/sh", "-c", shell_cmd, (void *)NULL);
+    execl("/bin/sh", "-c", shell_cmd, (void *)NULL);
   }
 }
 
@@ -123,12 +123,16 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
         }
       }
 
+      printf("%d %d %d\n", super, shift, sym);
+
       if (sym == XKB_KEY_Return) {
         if (super && !shift) {
           exec_command("gnome-terminal");
+          return;
         }
         if (super && shift) {
           exec_command("weston-terminal");
+          return;
         }
       }
     }

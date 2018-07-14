@@ -33,7 +33,7 @@ struct wm_surface {
     wm_surface_render_handler render_handler, void* data);
 
   void (*frame_done)(struct wm_surface* this,
-    wm_surface_frame_done_handler frame_donew_handler, struct timespec* now);
+    wm_surface_frame_done_handler frame_done_handler, struct timespec* now);
 
   void (*toplevel_set_size)(struct wm_surface* this, int width, int height);
 
@@ -45,13 +45,15 @@ struct wm_surface {
   void (*toplevel_set_focused)(struct wm_surface* this,
     struct wm_seat* seat, bool focused);
 
+  bool (*under_point)(struct wm_surface* this, int sx, int sy);
+
   struct wlr_surface* (*wlr_surface_at)(struct wm_surface* this,
     double sx, double sy, double *sub_x, double *sub_y);
 
   struct wm_seat* (*locate_seat)(struct wm_surface* this);
 };
 
-void handle_move(struct wl_listener *listener, void *data);
+void handle_request_move(struct wl_listener *listener, void *data);
 
 void handle_resize(struct wl_listener *listener, void *data);
 

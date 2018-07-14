@@ -154,13 +154,22 @@ struct wlr_surface* wm_surface_xwayland_wlr_surface_at(struct wm_surface* this,
   return surface;
 }
 
+bool wm_surface_xwayland_under_point(struct wm_surface* this,
+  int sx, int sy) {
+  double sub_x, sub_y;
+  struct wlr_surface *surface = wlr_surface_surface_at(
+    this->surface, sx, sy, &sub_x, &sub_y);
+  bool is_under_point = this->surface == surface;
+  return is_under_point;
+}
+
 struct wm_seat* wm_surface_xwayland_locate_seat(struct wm_surface* this) {
   struct wm_seat* default_seat = wm_seat_find_or_create(this->server,
     WM_DEFAULT_SEAT);
   return default_seat;
 }
 
-static void  handle_xwayland_resize(struct wl_listener *listener, void *data) {
+static void handle_xwayland_resize(struct wl_listener *listener, void *data) {
   struct wlr_xwayland_resize_event *e = data;
 	struct wm_surface *surface = wl_container_of(listener, surface, resize);
   wm_surface_begin_resize(surface, e->edges);
@@ -177,6 +186,7 @@ struct wm_surface* wm_surface_xwayland_create(struct wlr_xwayland_surface* xwayl
   wm_surface->toplevel_set_maximized = wm_surface_xwayland_toplevel_set_maximized;
   wm_surface->toplevel_constrained_set_size = wm_surface_xwayland_constrained_set_size;
   wm_surface->toplevel_set_focused = wm_surface_xwayland_toplevel_set_focused;
+  wm_surface->under_point = wm_surface_xwayland_under_point;
   wm_surface->wlr_surface_at = wm_surface_xwayland_wlr_surface_at;
   wm_surface->locate_seat = wm_surface_xwayland_locate_seat;
 
@@ -186,7 +196,7 @@ struct wm_surface* wm_surface_xwayland_create(struct wlr_xwayland_surface* xwayl
   wm_surface->unmap.notify = handle_unmap;
   wl_signal_add(&xwayland_surface->events.unmap, &wm_surface->unmap);
 
-  wm_surface->move.notify = handle_move;
+  wm_surface->move.notify = handle_request_move;
   wl_signal_add(&xwayland_surface->events.request_move,
     &wm_surface->move);
 

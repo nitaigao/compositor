@@ -33,13 +33,19 @@ static void handle_cursor_button(struct wl_listener *listener, void *data) {
   struct wlr_event_pointer_button *event = data;
   struct wm_pointer *pointer = wl_container_of(listener, pointer, button);
 
+  wlr_seat_pointer_notify_button(pointer->seat->seat,
+    event->time_msec, event->button, event->state);
+
   if (event->state == WLR_BUTTON_RELEASED) {
     wm_pointer_set_mode(pointer, WM_POINTER_MODE_FREE);
-    wm_server_focus_window_under_point(pointer->server, pointer->seat,
-      pointer->cursor->x, pointer->cursor->y);
   }
 
-  wlr_seat_pointer_notify_button(pointer->seat->seat, event->time_msec, event->button, event->state);
+  if (event->state == WLR_BUTTON_PRESSED) {
+    wm_server_focus_window_under_point(pointer->server, pointer->seat,
+      pointer->cursor->x, pointer->cursor->y);
+
+    wm_pointer_motion(pointer, event->time_msec);
+  }
 }
 
 static void handle_cursor_motion(struct wl_listener *listener, void *data) {
@@ -87,54 +93,55 @@ void wm_pointer_set_resize_edge(struct wm_pointer* pointer, uint32_t resize_edge
   pointer->resize_edge = resize_edge;
 }
 
+struct wm_window* wm_pointer_focused_window(struct wm_pointer *pointer) {
+  struct wm_window* window;
+  wl_list_for_each(window, &pointer->server->windows, link) {
+    if (pointer->focused_surface == window->surface) {
+      return window;
+    }
+  }
+  return NULL;
+}
+
 void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time) {
-  pointer->focused_surface = NULL;
+  struct wm_window* window = wm_pointer_focused_window(pointer);
 
-  struct wlr_surface* focused_surface = pointer->seat->seat->pointer_state.focused_surface;
-
-  if (!focused_surface) {
+  if (!window) {
     wm_pointer_set_default_cursor(pointer);
+    return;
   }
 
-  int list_length = wl_list_length(&pointer->server->windows);
+  window->update_x = false;
+  window->update_y = false;
 
-  if (list_length > 0) {
-    struct wm_window *window = wl_list_first(
-      &pointer->server->windows, window, link);
+  if (pointer->mode == WM_POINTER_MODE_RESIZE) {
+    wm_window_resize(window, pointer);
+    return;
+  }
 
-    window->update_x = false;
-    window->update_y = false;
-    // pointer->focused_surface = window->surface;
+  if (pointer->mode == WM_POINTER_MODE_MOVE) {
+    int dx = pointer->cursor->x - pointer->offset_x;
+    int dy = pointer->cursor->y - pointer->offset_y;
 
-    if (pointer->mode == WM_POINTER_MODE_RESIZE) {
-      wm_window_resize(window, pointer);
-      return;
-    }
+    int x = pointer->window_x + dx;
+    int y = pointer->window_y + dy;
 
-    if (pointer->mode == WM_POINTER_MODE_MOVE) {
-      int dx = pointer->cursor->x - pointer->offset_x;
-      int dy = pointer->cursor->y - pointer->offset_y;
+    wm_window_move(window, x, y);
+  }
 
-      int x = pointer->window_x + dx;
-      int y = pointer->window_y + dy;
+  double local_x = pointer->cursor->x - window->x;
+  double local_y = pointer->cursor->y - window->y;
 
-      wm_window_move(window, x, y);
-    }
+  double sx, sy;
 
-    double local_x = pointer->cursor->x - window->x;
-    double local_y = pointer->cursor->y - window->y;
+  struct wlr_surface *surface = window->surface->wlr_surface_at(
+    window->surface, local_x, local_y, &sx, &sy);
 
-    double sx, sy;
-
-    struct wlr_surface *surface = window->surface->wlr_surface_at(
-      window->surface, local_x, local_y, &sx, &sy);
-
-    if (surface) {
-      wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
-      wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
-    } else {
-      wlr_seat_pointer_clear_focus(pointer->seat->seat);
-    }
+  if (surface) {
+    wlr_seat_pointer_notify_enter(pointer->seat->seat, surface, sx, sy);
+    wlr_seat_pointer_notify_motion(pointer->seat->seat, time, sx, sy);
+  } else {
+    wlr_seat_pointer_clear_focus(pointer->seat->seat);
   }
 }
 
