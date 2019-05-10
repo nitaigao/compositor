@@ -3,7 +3,6 @@
 #include "wm_shell_xdg_v6.h"
 
 #include <stdlib.h>
-#include <wlr/types/wlr_wl_shell.h>
 #include <wlr/types/wlr_xdg_shell_v6.h>
 
 #include "wm_pointer.h"
@@ -67,7 +66,7 @@ static void handle_xdg_v6_maximize(struct wl_listener *listener, void *data) {
 }
 
 static void handle_xdg_v6_resize(struct wl_listener *listener, void *data) {
-  struct wlr_wl_shell_surface_resize_event *e = data;
+  struct wlr_xdg_toplevel_v6_resize_event *e = data;
 	struct wm_surface *surface = wl_container_of(listener, surface, resize);
   wm_surface_begin_resize(surface, e->edges);
 }

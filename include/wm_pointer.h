@@ -30,6 +30,7 @@ struct wm_pointer {
   struct wl_listener axis;
   struct wl_listener cursor_motion_absolute;
   struct wl_listener cursor_motion;
+  struct wl_listener cursor_frame;
   struct wl_listener request_set_cursor;
   struct wl_listener button;
 };

@@ -62,6 +62,13 @@ static void handle_cursor_motion_absolute(struct wl_listener *listener, void *da
   wm_pointer_motion(pointer, event->time_msec);
 }
 
+static void handle_cursor_frame(struct wl_listener *listener, void *data) {
+  (void)data;
+  struct wm_pointer *pointer = wl_container_of(listener, pointer, cursor_frame);
+  wlr_seat_pointer_notify_frame(pointer->seat->seat);
+}
+
+
 static void handle_axis(struct wl_listener *listener, void *data) {
   struct wm_pointer *pointer = wl_container_of(listener, pointer, axis);
 	struct wlr_event_pointer_axis *event = data;
@@ -104,6 +111,9 @@ struct wm_window* wm_pointer_focused_window(struct wm_pointer *pointer) {
 }
 
 void wm_pointer_motion(struct wm_pointer *pointer, uint32_t time) {
+  wm_server_focus_window_under_point(pointer->server, pointer->seat,
+      pointer->cursor->x, pointer->cursor->y);
+
   struct wm_window* window = wm_pointer_focused_window(pointer);
 
   if (!window) {
@@ -157,6 +167,9 @@ struct wm_pointer* wm_pointer_create(struct wm_server* server, struct wm_seat* s
 
   wl_signal_add(&pointer->cursor->events.button, &pointer->button);
   pointer->button.notify = handle_cursor_button;
+
+  wl_signal_add(&pointer->cursor->events.frame, &pointer->cursor_frame);
+  pointer->cursor_frame.notify = handle_cursor_frame;
 
   wl_signal_add(&seat->seat->events.request_set_cursor,
     &pointer->request_set_cursor);

@@ -22,11 +22,10 @@ struct wm_server {
   struct wlr_xwayland *xwayland;
 
   struct wlr_xcursor_manager *xcursor_manager;
-  struct wlr_xdg_output_manager* xdg_output_manager;
+  struct wlr_xdg_output_manager_v1* xdg_output_manager;
   struct wlr_data_device_manager *data_device_manager;
-  struct wlr_primary_selection_device_manager *primary_selection_device_manager;
   struct wlr_server_decoration_manager *server_decoration_manager;
-  struct wlr_linux_dmabuf *linux_dmabuf;
+  struct wlr_linux_dmabuf_v1 *linux_dmabuf;
 
   struct wl_listener new_input;
   struct wl_listener new_output;

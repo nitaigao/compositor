@@ -2,6 +2,7 @@
 
 #include "wm_server.h"
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <wlr/backend.h>
@@ -18,7 +19,7 @@
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_xdg_shell_v6.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include <wlr/types/wlr_xdg_output.h>
+#include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_data_device.h>
@@ -26,7 +27,7 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_server_decoration.h>
-#include <wlr/types/wlr_linux_dmabuf.h>
+#include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/util/log.h>
 
 #include "wm_pointer.h"
@@ -44,11 +45,8 @@ void wm_server_destroy(struct wm_server* server) {
   wlr_data_device_manager_destroy(server->data_device_manager);
   server->data_device_manager = NULL;
 
-  wlr_xdg_output_manager_destroy(server->xdg_output_manager);
+  wlr_xdg_output_manager_v1_destroy(server->xdg_output_manager);
   server->xdg_output_manager = NULL;
-
-  wlr_primary_selection_device_manager_destroy(server->primary_selection_device_manager);
-  server->primary_selection_device_manager = NULL;
 
   wlr_output_layout_destroy(server->layout);
   server->layout = NULL;
@@ -154,7 +152,7 @@ struct wm_server* wm_server_create() {
   wlr_renderer_init_wl_display(server->renderer, server->wl_display);
 
   server->layout = wlr_output_layout_create();
-  server->xdg_output_manager = wlr_xdg_output_manager_create(server->wl_display, server->layout);
+  server->xdg_output_manager = wlr_xdg_output_manager_v1_create(server->wl_display, server->layout);
   server->compositor = wlr_compositor_create(server->wl_display, server->renderer);
 
   struct wm_shell* xdg_shell = wm_shell_xdg_create(server);
@@ -166,7 +164,7 @@ struct wm_server* wm_server_create() {
   struct wm_shell* xwayland_shell = wm_shell_xwayland_create(server);
   wl_list_insert(&server->shells, &xwayland_shell->link);
 
-  server->xcursor_manager = wlr_xcursor_manager_create("default", 24);
+  server->xcursor_manager = wlr_xcursor_manager_create("default", 32);
 
   if (!server->xcursor_manager) {
     wlr_log(WLR_ERROR, "Failed to load cursor");
@@ -177,10 +175,7 @@ struct wm_server* wm_server_create() {
   wlr_server_decoration_manager_set_default_mode(server->server_decoration_manager,
     WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
 
-  server->primary_selection_device_manager =
-    wlr_primary_selection_device_manager_create(server->wl_display);
-
-  server->linux_dmabuf = wlr_linux_dmabuf_create(server->wl_display, server->renderer);
+  server->linux_dmabuf = wlr_linux_dmabuf_v1_create(server->wl_display, server->renderer);
 
   server->socket = wl_display_add_socket_auto(server->wl_display);
 

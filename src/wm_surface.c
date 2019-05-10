@@ -8,7 +8,6 @@
 #include <wlr/xwayland.h>
 #include <wlr/backend/session.h>
 #include <wlr/render/wlr_renderer.h>
-#include <wlr/types/wlr_wl_shell.h>
 #include <wlr/types/wlr_surface.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_idle.h>
@@ -19,7 +18,7 @@
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_xdg_shell_v6.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include <wlr/types/wlr_xdg_output.h>
+#include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_matrix.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_data_device.h>

@@ -63,15 +63,15 @@ struct wm_output* wm_output_create(struct wlr_output* wlr_output,
   wlr_output_layout_add_auto(layout, wlr_output);
 
   if (strcmp(wlr_output->name, "eDP-1") == 0) {
-    wlr_output_set_scale(wlr_output, 2.0);
+    wlr_output_set_scale(wlr_output, 3.0);
   }
 
   if (strcmp(wlr_output->name, "DP-1") == 0) {
-    wlr_output_set_scale(wlr_output, 2.0);
+    wlr_output_set_scale(wlr_output, 3.0);
   }
 
   if (strcmp(wlr_output->name, "X11-1") == 0) {
-    wlr_output_set_scale(wlr_output, 2.0);
+    wlr_output_set_scale(wlr_output, 3.0);
   }
 
   wlr_xcursor_manager_load(server->xcursor_manager, wlr_output->scale);
@@ -152,7 +152,7 @@ void wm_output_render(struct wm_output* output) {
 
   struct wlr_renderer *renderer = wlr_backend_get_renderer(wlr_output->backend);
 
-  wlr_output_make_current(wlr_output, NULL);
+  wlr_output_attach_render(wlr_output, NULL);
   wlr_renderer_begin(renderer, wlr_output->width, wlr_output->height);
 
   float color[4] = { 0.0, 0, 0, 1.0 };
@@ -188,6 +188,7 @@ void wm_output_render(struct wm_output* output) {
     window->surface->frame_done(window->surface, send_frame_done, &now);
   }
 
-  wlr_output_swap_buffers(wlr_output, NULL, NULL);
+  wlr_output_render_software_cursors(wlr_output, NULL);
+  wlr_output_commit(wlr_output);
   wlr_renderer_end(renderer);
 }

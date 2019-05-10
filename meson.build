@@ -4,6 +4,8 @@ project('boxy', 'c', default_options : [
   'c_std=gnu11'
 ])
 
+add_global_arguments('-DWLR_USE_UNSTABLE', language : 'c')
+
 wlroots = dependency('wlroots')
 wayland = dependency('wayland-server')
 xkbcommon = dependency('xkbcommon')

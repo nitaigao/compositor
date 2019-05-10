@@ -23,7 +23,7 @@ void exec_command(const char* shell_cmd) {
     wlr_log(WLR_ERROR, "cannot execute binding command: fork() failed");
     return;
   } else if (pid == 0) {
-    execl("/bin/sh", "-c", shell_cmd, (void *)NULL);
+    execl("/bin/sh", "sh", "-c", shell_cmd, (void *)NULL);
   }
 }
 
@@ -82,7 +82,7 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
       }
 
       if (super && sym == XKB_KEY_b) {
-        exec_command("chrome");
+        exec_command("chromium");
         return;
       }
 
@@ -127,11 +127,11 @@ void wm_keyboard_key_event(struct wm_keyboard *keyboard,
 
       if (sym == XKB_KEY_Return) {
         if (super && !shift) {
-          exec_command("gnome-terminal");
+          exec_command("tilix");
           return;
         }
         if (super && shift) {
-          exec_command("weston-terminal");
+          exec_command("gnome-terminal");
           return;
         }
       }
